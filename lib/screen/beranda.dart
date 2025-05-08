@@ -70,10 +70,10 @@ class _BerandaState extends State<Beranda> {
 
     final current = await CuacaService.getCurrentWeather(lat, lon);
     final forecast = await CuacaService.getForecast(lat, lon);
-    final city = await CuacaService.getCityName(lat, lon);
+    // final city = await CuacaService.getCityName(lat, lon);
 
     setState(() {
-      cityName = city;
+      // cityName = city;
       temperature = current['main']['temp'];
       condition = current['weather'][0]['main'];
       iconMain = _getLocalWeatherIcon(condition);
@@ -120,46 +120,24 @@ class _BerandaState extends State<Beranda> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('PocketFarm')),
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/logo.png', // Ganti dengan path logo kamu
+              height: 32, // Atur ukuran sesuai kebutuhan
+            ),
+            SizedBox(width: 8),
+            Text('PocketFarm', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                DropdownButton<String>(
-                  hint: Text('Pilih Kota'),
-                  value: selectedKota,
-                  items:
-                      daftarKota.keys.map((String kota) {
-                        return DropdownMenuItem<String>(
-                          value: kota,
-                          child: Text(kota),
-                        );
-                      }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedKota = value;
-                      useManualKota = true;
-                      _loadWeatherData();
-                    });
-                  },
-                ),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      useManualKota = false;
-                      selectedKota = null;
-                      _loadWeatherData();
-                    });
-                  },
-                  child: Text('Gunakan Lokasi Otomatis'),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
             Card(
               elevation: 3,
               shape: RoundedRectangleBorder(
@@ -173,7 +151,24 @@ class _BerandaState extends State<Beranda> {
                       children: [
                         Icon(Icons.location_on),
                         SizedBox(width: 4),
-                        Text(cityName, style: TextStyle(fontSize: 18)),
+                        DropdownButton<String>(
+                          hint: Text('Pilih Kota'),
+                          value: selectedKota,
+                          items:
+                              daftarKota.keys.map((String kota) {
+                                return DropdownMenuItem<String>(
+                                  value: kota,
+                                  child: Text(kota),
+                                );
+                              }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedKota = value;
+                              useManualKota = true;
+                              _loadWeatherData();
+                            });
+                          },
+                        ),
                       ],
                     ),
                     SizedBox(height: 8),
