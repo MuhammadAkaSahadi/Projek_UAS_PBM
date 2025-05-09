@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:projek_uas/pages/mapping.dart';
-import 'package:animations/animations.dart'; 
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:projek_uas/screen/beranda.dart';
+import 'package:projek_uas/screen/kebunSaya.dart';
+import 'package:projek_uas/screen/hasilLaporan.dart';
+import 'package:projek_uas/screen/akun.dart';
 
-
-void main() {
+void main() async{
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('id_ID', null);
   runApp(const MyApp());
 }
 
@@ -12,78 +16,93 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
- return MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(fontFamily: 'Roboto'),
-      home: const MainPage(),
-      color: Color(0xFFF6F8ED),
-      
-    );  }
+      title: 'Pocket Farm',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple), fontFamily: 'Roboto'
+      ),
+      home: const MyHomePage(title: 'Pocket Farm'),
+      color: Color(0xFFF6F8ED)
+    );
+  }
 }
 
-class MainPage extends StatefulWidget {
-  const MainPage({super.key});
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key, required this.title});
+
+  final String title;
 
   @override
-  State<MainPage> createState() => _MainPageState();
+  State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MainPageState extends State<MainPage> {
-  int _currentIndex = 0;
+class _MyHomePageState extends State<MyHomePage> {
+  int _selectedIndex = 0;
 
-  final List<Widget> _pages = const [
-    MappingPage(),
-
+  // Daftar widget halaman
+  final List<Widget> _pages = [
+    Beranda(),
+    KebunSaya(),
+    HasilLaporan(),
+    Akun()
   ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F9F9),
-      body: SafeArea(
-        child: PageTransitionSwitcher(
-          duration: const Duration(milliseconds: 300),
-          transitionBuilder: (child, animation, secondaryAnimation) {
-            return FadeThroughTransition(
-              animation: animation,
-              secondaryAnimation: secondaryAnimation,
-              child: child,
-            );
-          },
-          child: _pages[_currentIndex],
-        ),
-      ),
+      body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        selectedItemColor: Color(0xFF7ACE34),
-        backgroundColor: const Color(0xFFF9F9F9),
-        unselectedItemColor: Colors.grey,
-        showSelectedLabels: true,
-        showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
-        onTap: (index) {
-          if (_currentIndex != index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          }
-        },
-        items: const [
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        selectedItemColor: const Color.fromARGB(255, 0, 0, 0),
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home),
+            icon: Image.asset(
+              _selectedIndex == 0
+                  ? 'assets/Beranda_hitam.png'
+                  : 'assets/Beranda.png',
+              width: 20,
+              height: 20,
+            ),
             label: 'Beranda',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.thermostat),
-            label: 'Suhu',
+            icon: Image.asset(
+              _selectedIndex == 1
+                  ? 'assets/Kebun Saya_hitam.png'
+                  : 'assets/Kebun Saya.png',
+              width: 20,
+              height: 20,
+            ),
+            label: 'Kebun Saya',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'Riwayat',
+            icon: Image.asset(
+              _selectedIndex == 2
+                  ? 'assets/Hasil Laporan_hitam.png'
+                  : 'assets/Hasil Laporan.png',
+              width: 20,
+              height: 20,
+            ),
+            label: 'Hasil Laporan',
           ),
-         
           BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profil',
+            icon: Image.asset(
+              _selectedIndex == 3
+                  ? 'assets/Akun_hitam.png'
+                  : 'assets/Akun.png',
+              width: 20,
+              height: 20,
+            ),
+            label: 'Akun',
           ),
         ],
       ),
