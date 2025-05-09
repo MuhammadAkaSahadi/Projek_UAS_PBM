@@ -74,12 +74,16 @@ flutter:
   # Navbar Logo
     - assets/Beranda.png
     - assets/Beranda_hitam.png
+    - assets/Beranda_hijau.png
     - assets/Kebun Saya.png
     - assets/Kebun Saya_hitam.png
+    - assets/Kebun Saya_hijau.png
     - assets/Hasil Laporan.png
     - assets/Hasil Laporan_hitam.png
+    - assets/Hasil Laporan_hijau.png
     - assets/Akun.png
     - assets/Akun_hitam.png
+    - assets/Akun_hijau.png
   # Weather
     - assets/weather/clear.png
     - assets/weather/clouds.png

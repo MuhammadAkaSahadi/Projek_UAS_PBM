@@ -20,13 +20,14 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Pocket Farm',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple), fontFamily: 'Roboto'
+        fontFamily: 'Roboto',
+        scaffoldBackgroundColor: Color(0xFFF9F9F9), // Ubah background seluruh page di sini
       ),
       home: const MyHomePage(title: 'Pocket Farm'),
-      color: Color(0xFFF6F8ED)
     );
   }
 }
+
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -43,9 +44,10 @@ class _MyHomePageState extends State<MyHomePage> {
   // Daftar widget halaman
   final List<Widget> _pages = [
     Beranda(),
-    KebunSaya(),
+    MappingPage(),
     HasilLaporan(),
-    Akun()
+    Akun(),
+    
   ];
 
   void _onItemTapped(int index) {
@@ -57,17 +59,18 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF9F9F9),
       body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        selectedItemColor: const Color.fromARGB(255, 0, 0, 0),
+        selectedItemColor: const Color(0xFF7ACE34),
         items: [
           BottomNavigationBarItem(
             icon: Image.asset(
               _selectedIndex == 0
-                  ? 'assets/Beranda_hitam.png'
+                  ? 'assets/Beranda_hijau.png'
                   : 'assets/Beranda.png',
               width: 20,
               height: 20,
@@ -77,7 +80,7 @@ class _MyHomePageState extends State<MyHomePage> {
           BottomNavigationBarItem(
             icon: Image.asset(
               _selectedIndex == 1
-                  ? 'assets/Kebun Saya_hitam.png'
+                  ? 'assets/Kebun Saya_hijau.png'
                   : 'assets/Kebun Saya.png',
               width: 20,
               height: 20,
@@ -87,7 +90,7 @@ class _MyHomePageState extends State<MyHomePage> {
           BottomNavigationBarItem(
             icon: Image.asset(
               _selectedIndex == 2
-                  ? 'assets/Hasil Laporan_hitam.png'
+                  ? 'assets/Hasil Laporan_hijau.png'
                   : 'assets/Hasil Laporan.png',
               width: 20,
               height: 20,
@@ -97,7 +100,7 @@ class _MyHomePageState extends State<MyHomePage> {
           BottomNavigationBarItem(
             icon: Image.asset(
               _selectedIndex == 3
-                  ? 'assets/Akun_hitam.png'
+                  ? 'assets/Akun_hijau.png'
                   : 'assets/Akun.png',
               width: 20,
               height: 20,
