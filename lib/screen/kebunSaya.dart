@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:projek_uas/pages/add_mapping.dart';
-
+import 'package:projek_uas/screen/detail/detailLahan.dart';
 
 class MappingPage extends StatelessWidget {
   const MappingPage({super.key});
@@ -85,26 +85,28 @@ class MappingPage extends StatelessWidget {
               ),
               trailing: const Icon(Icons.open_in_new, size: 22),
               onTap: () {
-                // Handle view detail navigation
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => DetailLahan()),
+                );
               },
             ),
           );
         },
       ),
-    floatingActionButton: FloatingActionButton(
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AddMappingPage()),
-    );
-  },
-  backgroundColor: const Color(0xFFC9E5BA),
-  shape: const CircleBorder(),
-  elevation: 0,
-  highlightElevation: 0,
-  child: const Icon(Icons.add, color: Colors.black),
-),
-
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddMappingPage()),
+          );
+        },
+        backgroundColor: const Color(0xFFC9E5BA),
+        shape: const CircleBorder(),
+        elevation: 0,
+        highlightElevation: 0,
+        child: const Icon(Icons.add, color: Colors.black),
+      ),
     );
   }
 }
