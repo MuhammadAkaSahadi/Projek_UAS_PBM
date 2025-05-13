@@ -43,6 +43,7 @@ dependencies:
   permission_handler: ^12.0.0+1
   geocoding: ^3.0.0
   intl: ^0.18.1
+  auto_size_text: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -93,6 +94,13 @@ flutter:
     - assets/weather/rain.png
     - assets/weather/thunderstorm.png
     - assets/weather/unknown.png
+  # Jadwal
+    - assets/jadwal/clock.png
+    - assets/jadwal/compost.png
+    - assets/jadwal/fork.png
+    - assets/jadwal/shovel.png
+    - assets/jadwal/watering.png
+
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

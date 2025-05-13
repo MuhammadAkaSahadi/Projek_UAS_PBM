@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:intl/intl.dart';
-import 'package:projek_uas/weather/fetchCuaca.dart';
+import 'package:projek_uas/screen/detail/detailAddLahan.dart';
+import 'package:projek_uas/weather/cuacaBeranda.dart';
+import 'package:projek_uas/screen/detail/detailPanen.dart';
 
 class Beranda extends StatefulWidget {
   const Beranda({super.key});
@@ -11,255 +11,261 @@ class Beranda extends StatefulWidget {
 }
 
 class _BerandaState extends State<Beranda> {
-  final Map<String, Map<String, double>> daftarKota = {
-    'Jember': {'lat': -8.1737, 'lon': 113.7002},
-    'Bondowoso': {'lat': -7.9135, 'lon': 113.8208},
-    'Lumajang': {'lat': -8.1349, 'lon': 113.2249},
-    'Probolinggo': {'lat': -7.7569, 'lon': 113.2115},
-    'Banyuwangi': {'lat': -8.2192, 'lon': 114.3691},
-  };
-
-  String cityName = '';
-  double temperature = 0.0;
-  String condition = '';
-  List<dynamic> forecastList = [];
-  String suggestion = '';
-  String? selectedKota;
-  bool useManualKota = false;
-  String iconMain = 'unknown';
-
-  String _translateCondition(String condition) {
-    switch (condition.toLowerCase()) {
-      case 'clear':
-        return 'Cerah';
-      case 'clouds':
-        return 'Berawan';
-      case 'rain':
-        return 'Hujan';
-      case 'thunderstorm':
-        return 'Badai Petir';
-      case 'drizzle':
-        return 'Gerimis';
-      case 'mist':
-      case 'haze':
-        return 'Berkabut';
-      case 'snow':
-        return 'Salju';
-      default:
-        return condition; // fallback: tampilkan aslinya
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadWeatherData();
-  }
-
-  Future<void> _loadWeatherData() async {
-    double lat, lon;
-
-    if (useManualKota && selectedKota != null) {
-      lat = daftarKota[selectedKota]!['lat']!;
-      lon = daftarKota[selectedKota]!['lon']!;
-    } else {
-      final position = await Geolocator.getCurrentPosition();
-      lat = position.latitude;
-      lon = position.longitude;
-    }
-
-    final current = await CuacaService.getCurrentWeather(lat, lon);
-    final forecast = await CuacaService.getForecast(lat, lon);
-    // final city = await CuacaService.getCityName(lat, lon);
-
-    setState(() {
-      // cityName = city;
-      temperature = current['main']['temp'];
-      condition = current['weather'][0]['main'];
-      iconMain = _getLocalWeatherIcon(condition);
-      forecastList = forecast.take(5).toList();
-      suggestion = _getSuggestion(current);
-    });
-  }
-
-  String _getSuggestion(Map<String, dynamic> weather) {
-    double temp = weather['main']['temp'];
-    double rain = weather['rain'] != null ? weather['rain']['1h'] ?? 0.0 : 0.0;
-
-    if (rain > 2) {
-      return 'Hindari tanam/panen, hujan lebat.';
-    } else if (temp > 30) {
-      return 'Cuaca panas, baik untuk pengeringan hasil panen.';
-    } else if (temp >= 24 && temp <= 30) {
-      return 'Ideal untuk penanaman dan penyiraman.';
-    }
-
-    return 'Perhatikan cuaca, mungkin tidak ideal untuk aktivitas menanam.';
-  }
-
-  String _getLocalWeatherIcon(String main) {
-    switch (main.toLowerCase()) {
-      case 'clear':
-        return 'clear';
-      case 'clouds':
-        return 'clouds';
-      case 'rain':
-        return 'rain';
-      case 'thunderstorm':
-        return 'thunderstorm';
-      case 'drizzle':
-        return 'drizzle';
-      case 'mist':
-      case 'haze':
-        return 'mist';
-      default:
-        return 'unknown';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color.fromRGBO(247, 247, 247, 1),
       appBar: AppBar(
+        backgroundColor: const Color.fromRGBO(247, 247, 247, 1),
+        elevation: 0,
         title: Row(
           children: [
-            Image.asset(
-              'assets/logo.png', // Ganti dengan path logo kamu
-              height: 32, // Atur ukuran sesuai kebutuhan
+            Image.asset('assets/logo.png', height: 28),
+            const SizedBox(width: 8),
+            const Text(
+              'PocketFarm',
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            SizedBox(width: 8),
-            Text('PocketFarm', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
       ),
-
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Card(
-              elevation: 3,
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        children: [
+          const CuacaBeranda(),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color.fromRGBO(76, 175, 80, 1),
+              padding: const EdgeInsets.symmetric(
+                vertical: 14,
+              ), // Tambahkan padding vertikal
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.location_on),
-                        SizedBox(width: 4),
-                        DropdownButton<String>(
-                          hint: Text('Pilih Kota'),
-                          value: selectedKota,
-                          items:
-                              daftarKota.keys.map((String kota) {
-                                return DropdownMenuItem<String>(
-                                  value: kota,
-                                  child: Text(kota),
-                                );
-                              }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              selectedKota = value;
-                              useManualKota = true;
-                              _loadWeatherData();
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${temperature.toStringAsFixed(0)}°C',
-                          style: TextStyle(
-                            fontSize: 54,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Image.asset(
-                          'assets/weather/$iconMain.png',
-                          width: 70,
-                          height: 70,
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Kondisi : ${_translateCondition(condition)}',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                    Text(
-                      suggestion,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Divider(),
-                    SizedBox(height: 8),
-                    SizedBox(
-                      height: 150,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: forecastList.length,
-                        itemBuilder: (context, index) {
-                          final item = forecastList[index];
-                          final icon = _getLocalWeatherIcon(
-                            item['weather'][0]['main'],
-                          );
-                          final waktu = DateFormat(
-                            'EEEE, HH:mm',
-                            'id_ID',
-                          ).format(DateTime.parse(item['dt_txt']));
-                          final suhu = item['main']['temp'];
-                          final kondisi = _translateCondition(
-                            item['weather'][0]['main'],
-                          );
-
-                          return Container(
-                            width: 100,
-                            margin: EdgeInsets.symmetric(horizontal: 8),
-                            child: Column(
-                              children: [
-                                Image.asset(
-                                  'assets/weather/$icon.png',
-                                  width: 30,
-                                  height: 30,
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  waktu.split(',')[0],
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                                Text(
-                                  waktu.split(',')[1].trim(),
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  '${suhu.toStringAsFixed(1)}°C',
-                                  style: TextStyle(fontSize: 14),
-                                ),
-                                Text(kondisi, style: TextStyle(fontSize: 14)),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+                borderRadius: BorderRadius.circular(
+                  4,
+                ), // Sudut tidak terlalu lancip (seperti scaffold)
               ),
             ),
-            SizedBox(height: 16),
-          ],
-        ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => DetailTambahLahan()),
+              );
+            },
+            child: Row(
+              mainAxisAlignment:
+                  MainAxisAlignment.center, // Posisikan isi ke tengah
+              mainAxisSize: MainAxisSize.max,
+              children: const [
+                Icon(Icons.add, color: Colors.white),
+                SizedBox(width: 8),
+                Text(
+                  'Tambahkan Lahan',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // const Text(
+          //   'Jadwal Hari Ini',
+          //   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          // ),
+          // const SizedBox(height: 12),
+          // Card(
+          //   color: Colors.white,
+          //   elevation: 2,
+          //   shape: RoundedRectangleBorder(
+          //     borderRadius: BorderRadius.circular(12),
+          //   ),
+          //   child: Padding(
+          //     padding: const EdgeInsets.all(16),
+          //     child: Column(
+          //       children: [
+          //         Row(
+          //           children: const [
+          //             Expanded(
+          //               child: Text(
+          //                 'Sawah Sumbersari',
+          //                 style: TextStyle(fontWeight: FontWeight.bold),
+          //               ),
+          //             ),
+          //             Text(
+          //               'Jember',
+          //               style: TextStyle(fontWeight: FontWeight.bold),
+          //             ),
+          //           ],
+          //         ),
+          //         const SizedBox(height: 8),
+          //         const Divider(),
+          //         const SizedBox(height: 8),
+          //         Row(
+          //           children: [
+          //             Image.asset(
+          //               'assets/jadwal/watering.png',
+          //               width: 25,
+          //               height: 25,
+          //             ),
+          //             const SizedBox(width: 8),
+          //             const Text(
+          //               'Penyiraman',
+          //               style: TextStyle(
+          //                 fontSize: 13,
+          //                 fontWeight: FontWeight.w500,
+          //               ),
+          //             ),
+          //             const Spacer(),
+          //             Image.asset(
+          //               'assets/jadwal/clock.png',
+          //               width: 14,
+          //               height: 14,
+          //             ),
+          //             const SizedBox(width: 4),
+          //             const Text('08:00', style: TextStyle(fontSize: 12)),
+          //           ],
+          //         ),
+          //         const SizedBox(height: 16),
+          //         Row(
+          //           children: [
+          //             Image.asset(
+          //               'assets/jadwal/compost.png',
+          //               width: 25,
+          //               height: 25,
+          //             ),
+          //             const SizedBox(width: 8),
+          //             const Text(
+          //               'Pemupukan',
+          //               style: TextStyle(
+          //                 fontSize: 13,
+          //                 fontWeight: FontWeight.w500,
+          //               ),
+          //             ),
+          //             const Spacer(),
+          //             Image.asset(
+          //               'assets/jadwal/clock.png',
+          //               width: 14,
+          //               height: 14,
+          //             ),
+          //             const SizedBox(width: 4),
+          //             const Text('08:00', style: TextStyle(fontSize: 12)),
+          //           ],
+          //         ),
+          //         const SizedBox(height: 16),
+          //         Row(
+          //           children: [
+          //             Image.asset(
+          //               'assets/jadwal/shovel.png',
+          //               width: 25,
+          //               height: 25,
+          //             ),
+          //             const SizedBox(width: 8),
+          //             const Text(
+          //               'Penanaman',
+          //               style: TextStyle(
+          //                 fontSize: 13,
+          //                 fontWeight: FontWeight.w500,
+          //               ),
+          //             ),
+          //             const Spacer(),
+          //             Image.asset(
+          //               'assets/jadwal/clock.png',
+          //               width: 14,
+          //               height: 14,
+          //             ),
+          //             const SizedBox(width: 4),
+          //             const Text('08:00', style: TextStyle(fontSize: 12)),
+          //           ],
+          //         ),
+          //         const SizedBox(height: 16),
+          //         Row(
+          //           children: [
+          //             Image.asset(
+          //               'assets/jadwal/fork.png',
+          //               width: 25,
+          //               height: 25,
+          //             ),
+          //             const SizedBox(width: 8),
+          //             const Text(
+          //               'Pemanenan',
+          //               style: TextStyle(
+          //                 fontSize: 13,
+          //                 fontWeight: FontWeight.w500,
+          //               ),
+          //             ),
+          //             const Spacer(),
+          //             ElevatedButton(
+          //               style: ElevatedButton.styleFrom(
+          //                 backgroundColor: const Color.fromRGBO(
+          //                   76,
+          //                   175,
+          //                   80,
+          //                   1,
+          //                 ), // Hijau RGBO
+          //                 padding: const EdgeInsets.symmetric(
+          //                   horizontal: 12,
+          //                   vertical: 8,
+          //                 ),
+          //                 textStyle: const TextStyle(fontSize: 12),
+          //               ),
+          //               onPressed: () {
+          //                 showDialog(
+          //                   context: context,
+          //                   builder: (BuildContext context) {
+          //                     return AlertDialog(
+          //                       title: const Text('Konfirmasi'),
+          //                       content: const Text('Yakin untuk Panen?'),
+          //                       actions: [
+          //                         TextButton(
+          //                           child: const Text('Batal', style: TextStyle(color: Color.fromARGB(255, 0, 0, 0))),
+          //                           onPressed: () {
+          //                             Navigator.of(
+          //                               context,
+          //                             ).pop(); // Tutup dialog
+          //                           },
+          //                         ),
+          //                         ElevatedButton(
+          //                           style: ElevatedButton.styleFrom(
+          //                             backgroundColor: const Color.fromRGBO(
+          //                               76,
+          //                               175,
+          //                               80,
+          //                               1,
+          //                             ),
+          //                           ),
+          //                           child: const Text('Ya', style: TextStyle(color: Colors.white)),
+          //                           onPressed: () {
+          //                             Navigator.of(
+          //                               context,
+          //                             ).pop(); // Tutup dialog
+          //                             Navigator.push(
+          //                               context,
+          //                               MaterialPageRoute(
+          //                                 builder: (context) => DetailPanen(),
+          //                               ),
+          //                             );
+          //                           },
+          //                         ),
+          //                       ],
+          //                     );
+          //                   },
+          //                 );
+          //               },
+          //               child: const Text(
+          //                 'Panen',
+          //                 style: TextStyle(color: Colors.white),
+          //               ),
+          //             ),
+          //           ],
+          //         ),
+          //       ],
+          //     ),
+          //   ),
+          // ),
+          // const SizedBox(height: 16),
+        ],
       ),
     );
   }
