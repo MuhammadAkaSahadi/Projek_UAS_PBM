@@ -113,7 +113,7 @@ class _CuacaBeranda extends State<CuacaBeranda> {
         return 'mist';
       default:
         return 'unknown';
-    }
+    } 
   }
 
   @override

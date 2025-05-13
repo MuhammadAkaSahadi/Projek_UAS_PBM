@@ -86,7 +86,10 @@ class MappingPage extends StatelessWidget {
               ),
               trailing: const Icon(Icons.open_in_new, size: 22),
               onTap: () {
-                // Handle view detail navigation
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => DetailTambahLahan()),
+                );
               },
             ),
           );
@@ -96,7 +99,7 @@ class MappingPage extends StatelessWidget {
   onPressed: () {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const DetailTambahLahan()),
+      MaterialPageRoute(builder: (context) => const AddMappingPage()),
     );
   },
   backgroundColor: const Color(0xFFC9E5BA),

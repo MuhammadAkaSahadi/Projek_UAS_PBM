@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:projek_uas/screen/beranda.dart';
+import 'package:projek_uas/screen/detail/detailLahan.dart';
 import 'package:projek_uas/screen/kebunSaya.dart';
 import 'package:projek_uas/screen/hasilLaporan.dart';
 import 'package:projek_uas/screen/akun.dart';
 
-void main() async{
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID', null);
   runApp(const MyApp());
@@ -21,13 +22,14 @@ class MyApp extends StatelessWidget {
       title: 'Pocket Farm',
       theme: ThemeData(
         fontFamily: 'Roboto',
-        scaffoldBackgroundColor: Color(0xFFF9F9F9), // Ubah background seluruh page di sini
+        scaffoldBackgroundColor: Color(
+          0xFFF9F9F9,
+        ), // Ubah background seluruh page di sini
       ),
       home: const MyHomePage(title: 'Pocket Farm'),
     );
   }
 }
-
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -47,7 +49,6 @@ class _MyHomePageState extends State<MyHomePage> {
     MappingPage(),
     HasilLaporan(),
     Akun(),
-    
   ];
 
   void _onItemTapped(int index) {
@@ -99,9 +100,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
           BottomNavigationBarItem(
             icon: Image.asset(
-              _selectedIndex == 3
-                  ? 'assets/Akun_hijau.png'
-                  : 'assets/Akun.png',
+              _selectedIndex == 3 ? 'assets/Akun_hijau.png' : 'assets/Akun.png',
               width: 20,
               height: 20,
             ),
