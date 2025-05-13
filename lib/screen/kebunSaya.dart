@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:projek_uas/pages/add_mapping.dart';
+import 'package:projek_uas/screen/detail/detailLahan.dart';
 import 'package:projek_uas/screen/detail/detail_add_lahan.dart';
 
 
@@ -88,7 +89,7 @@ class MappingPage extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => DetailTambahLahan()),
+                  MaterialPageRoute(builder: (context) => DetailLahan()),
                 );
               },
             ),
@@ -99,7 +100,7 @@ class MappingPage extends StatelessWidget {
   onPressed: () {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const AddMappingPage()),
+      MaterialPageRoute(builder: (context) => const DetailTambahLahan()),
     );
   },
   backgroundColor: const Color(0xFFC9E5BA),
