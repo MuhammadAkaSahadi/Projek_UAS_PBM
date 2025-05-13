@@ -89,6 +89,13 @@ flutter:
     - assets/weather/rain.png
     - assets/weather/thunderstorm.png
     - assets/weather/unknown.png
+  # Jadwal
+    - assets/jadwal/clock.png
+    - assets/jadwal/compost.png
+    - assets/jadwal/fork.png
+    - assets/jadwal/shovel.png
+    - assets/jadwal/watering.png
+
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
