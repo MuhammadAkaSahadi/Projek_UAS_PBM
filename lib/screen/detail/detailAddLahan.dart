@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-class DetailPanen extends StatefulWidget {
-  const DetailPanen({super.key});
+class DetailTambahLahan extends StatefulWidget {
+  const DetailTambahLahan({super.key});
 
   @override
-  State<DetailPanen> createState() => _DetailPanenState();
+  State<DetailTambahLahan> createState() => _DetailTambahLahanState();
 }
 
-class _DetailPanenState extends State<DetailPanen> {
+class _DetailTambahLahanState extends State<DetailTambahLahan> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -20,7 +20,7 @@ class _DetailPanenState extends State<DetailPanen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
-          "Konfirmasi Panen",
+          "Tambah Lahan",
           style: TextStyle(
             color: Colors.black,
             fontSize: 22,

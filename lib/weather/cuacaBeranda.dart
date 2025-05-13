@@ -1,3 +1,4 @@
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
@@ -118,7 +119,7 @@ class _CuacaBeranda extends State<CuacaBeranda> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(1.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -142,12 +143,13 @@ class _CuacaBeranda extends State<CuacaBeranda> {
                       DropdownButton<String>(
                         hint: Text('Pilih Kota'),
                         value: selectedKota,
-                        items: daftarKota.keys.map((String kota) {
-                          return DropdownMenuItem<String>(
-                            value: kota,
-                            child: Text(kota),
-                          );
-                        }).toList(),
+                        items:
+                            daftarKota.keys.map((String kota) {
+                              return DropdownMenuItem<String>(
+                                value: kota,
+                                child: Text(kota),
+                              );
+                            }).toList(),
                         onChanged: (value) {
                           setState(() {
                             selectedKota = value;
@@ -181,11 +183,21 @@ class _CuacaBeranda extends State<CuacaBeranda> {
                     'Kondisi : ${_translateCondition(condition)}',
                     style: TextStyle(fontSize: 18),
                   ),
-                  Text(
-                    suggestion,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0,
+                    ), // agar tidak mepet box
+                    child: AutoSizeText(
+                      suggestion,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 3, // maksimal baris agar tetap rapi
+                      minFontSize: 12, // batas minimal font biar tetap terbaca
+                      overflow:
+                          TextOverflow.ellipsis, // kalau masih terlalu panjang
                     ),
                   ),
                   Divider(),
