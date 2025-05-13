@@ -15,6 +15,15 @@ class _AddMappingPageState extends State<AddMappingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        title: const Text(
+          'Petakan Lahan Saya',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        elevation: 1,
+      ),
       body: Stack(
         children: [
           FlutterMap(
@@ -30,8 +39,7 @@ class _AddMappingPageState extends State<AddMappingPage> {
             children: [
               TileLayer(
                 urlTemplate:
-                    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                subdomains: const ['a', 'b', 'c'],
+                    'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                 userAgentPackageName: 'com.example.yourapp',
               ),
               if (polygonPoints.isNotEmpty)
@@ -47,68 +55,76 @@ class _AddMappingPageState extends State<AddMappingPage> {
                 ),
               if (polygonPoints.isNotEmpty)
                 MarkerLayer(
-                  markers:
-                      polygonPoints.map((point) {
-                        return Marker(
-                          width: 20,
-                          height: 20,
-                          point: point,
-                          child: const Icon(
-                            Icons.location_on,
-                            color: Colors.red,
-                            size: 20,
-                          ),
-                        );
-                      }).toList(),
+                  markers: polygonPoints.map((point) {
+                    return Marker(
+                      width: 20,
+                      height: 20,
+                      point: point,
+                      child: const Icon(
+                        Icons.location_on,
+                        color: Colors.red,
+                        size: 20,
+                      ),
+                    );
+                  }).toList(),
                 ),
             ],
           ),
-          // Top navbar
-          Positioned(
-            top: 50,
-            left: 16,
-            right: 16,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      shape: BoxShape.circle,
-                    ),
-                    padding: const EdgeInsets.all(8),
-                    child: const Icon(Icons.arrow_back),
-                  ),
-                ),
-                const Text(
-                  'Tambahkan Lahan',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(width: 32),
-              ],
-            ),
-          ),
         ],
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: FloatingActionButton.extended(
-          onPressed: () {
-            // Aksi tambahan, misal simpan titik
-          },
-          label: const Text('Tambah Lokasi'),
-          icon: const Icon(Icons.add),
-          backgroundColor: const Color(0xFFB1E27F),
-          foregroundColor: Colors.black,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          // Aksi: Temukan posisi pengguna
+        },
+        label: const Text('Temukan saya'),
+        icon: Image.asset(
+          'assets/cursor.png', // Gunakan file PNG icon cursor
+          width: 20,
+          height: 20,
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 4,
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(color: Color(0xFF7ACE34), width: 0.2),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () {
+                  // Aksi: mulai mode berjalan
+                },
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFF7ACE34), width: 1.5),
+                  foregroundColor: Color(0xFF7ACE34),
+                ),
+                child: const Text('Dengan berjalan'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  // Aksi: tambah titik secara manual
+                },
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: const Color(0xFF7ACE34),
+                ),
+                child: const Text('Tambahkan batas'),
+              ),
+            ),
+          ],
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }

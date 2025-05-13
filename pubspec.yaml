@@ -85,6 +85,7 @@ flutter:
     - assets/Akun.png
     - assets/Akun_hitam.png
     - assets/Akun_hijau.png
+    - assets/cursor.png
   # Weather
     - assets/weather/clear.png
     - assets/weather/clouds.png
