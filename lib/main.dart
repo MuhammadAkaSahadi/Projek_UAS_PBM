@@ -59,12 +59,12 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F9F9),
       body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
+        backgroundColor: const Color(0xFFF9F9F9),
         selectedItemColor: const Color(0xFF7ACE34),
         items: [
           BottomNavigationBarItem(
