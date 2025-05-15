@@ -5,6 +5,10 @@ import 'package:projek_uas/screen/detail/detailLahan.dart';
 import 'package:projek_uas/screen/kebunSaya.dart';
 import 'package:projek_uas/screen/hasilLaporan.dart';
 import 'package:projek_uas/screen/akun.dart';
+import 'package:projek_uas/screen/splash_screen1.dart';
+import 'package:projek_uas/screen/splash_screen2.dart';
+import 'package:projek_uas/screen/LoginRegister/login_screen.dart';
+import 'package:projek_uas/screen/LoginRegister/register_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,11 +26,16 @@ class MyApp extends StatelessWidget {
       title: 'Pocket Farm',
       theme: ThemeData(
         fontFamily: 'Roboto',
-        scaffoldBackgroundColor: Color(
-          0xFFF9F9F9,
-        ), // Ubah background seluruh page di sini
+        scaffoldBackgroundColor: const Color(0xFFF9F9F9),
       ),
-      home: const MyHomePage(title: 'Pocket Farm'),
+      initialRoute: '/splash1',
+      routes: {
+        '/splash1': (context) => const SplashScreen1(),
+        '/splash2': (context) => SplashScreen2(),
+        '/login': (context) => LoginScreen(),
+        '/register': (context) => RegisterScreen(),
+        '/home': (context) => const MyHomePage(title: 'Pocket Farm'),
+      },
     );
   }
 }
@@ -43,7 +52,6 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 0;
 
-  // Daftar widget halaman
   final List<Widget> _pages = [
     Beranda(),
     MappingPage(),
@@ -100,7 +108,9 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
           BottomNavigationBarItem(
             icon: Image.asset(
-              _selectedIndex == 3 ? 'assets/Akun_hijau.png' : 'assets/Akun.png',
+              _selectedIndex == 3
+                  ? 'assets/Akun_hijau.png'
+                  : 'assets/Akun.png',
               width: 20,
               height: 20,
             ),

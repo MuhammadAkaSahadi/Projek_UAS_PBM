@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:projek_uas/screen/detail/detail_add_lahan.dart';
 import 'package:projek_uas/weather/cuacaBeranda.dart';
-import 'package:projek_uas/screen/detail/detailPanen.dart';
 
 class Beranda extends StatefulWidget {
   const Beranda({super.key});
