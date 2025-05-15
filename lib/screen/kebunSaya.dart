@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:projek_uas/pages/add_mapping.dart';
 import 'package:projek_uas/screen/detail/detailLahan.dart';
 import 'package:projek_uas/screen/detail/detail_add_lahan.dart';
 

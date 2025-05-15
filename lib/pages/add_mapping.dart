@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:projek_uas/pages/add_mapping_berjalan.dart';
 
 class AddMappingPage extends StatefulWidget {
   const AddMappingPage({super.key});
@@ -11,6 +13,52 @@ class AddMappingPage extends StatefulWidget {
 
 class _AddMappingPageState extends State<AddMappingPage> {
   List<LatLng> polygonPoints = [];
+  LatLng? userLocation;
+  final MapController _mapController = MapController();
+
+  Future<void> _getUserLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Cek apakah service lokasi aktif
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Layanan lokasi tidak aktif')),
+      );
+      return;
+    }
+
+    // Cek izin
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Izin lokasi ditolak')),
+        );
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Izin lokasi ditolak permanen')),
+      );
+      return;
+    }
+
+    // Dapatkan lokasi saat ini
+    Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
+
+    setState(() {
+      userLocation = LatLng(position.latitude, position.longitude);
+    });
+
+    // Pindahkan map ke lokasi user
+    _mapController.move(userLocation!, 18);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +75,7 @@ class _AddMappingPageState extends State<AddMappingPage> {
       body: Stack(
         children: [
           FlutterMap(
+            mapController: _mapController,
             options: MapOptions(
               center: LatLng(-6.200000, 106.816666),
               zoom: 16.0,
@@ -53,9 +102,10 @@ class _AddMappingPageState extends State<AddMappingPage> {
                     ),
                   ],
                 ),
-              if (polygonPoints.isNotEmpty)
-                MarkerLayer(
-                  markers: polygonPoints.map((point) {
+              MarkerLayer(
+                markers: [
+                  // Titik-titik polygon
+                  ...polygonPoints.map((point) {
                     return Marker(
                       width: 20,
                       height: 20,
@@ -66,16 +116,28 @@ class _AddMappingPageState extends State<AddMappingPage> {
                         size: 20,
                       ),
                     );
-                  }).toList(),
-                ),
+                  }),
+
+                  // Titik user (ikon merah besar)
+                  if (userLocation != null)
+                    Marker(
+                      point: userLocation!,
+                      width: 40,
+                      height: 40,
+                      child: const Icon(
+                        Icons.my_location,
+                        color: Colors.red,
+                        size: 30,
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // Aksi: Temukan posisi pengguna
-        },
+        onPressed: _getUserLocation,
         label: const Text('Temukan saya'),
         icon: Image.asset(
           'assets/cursor.png', // Gunakan file PNG icon cursor
@@ -92,23 +154,50 @@ class _AddMappingPageState extends State<AddMappingPage> {
         decoration: const BoxDecoration(
           color: Colors.white,
           border: Border(
-            top: BorderSide(color: Color(0xFF7ACE34), width: 0.2),
+            top: BorderSide(color: Color(0xFF4CAF50), width: 0.2),
           ),
         ),
         child: Row(
           children: [
             Expanded(
-              child: OutlinedButton(
+  child: OutlinedButton(
+    onPressed: () {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Konfirmasi'),
+            content: const Text('Pastikan Anda sudah berada di lokasi lahan sebelum memulai pengukuran.'),
+            actions: [
+              TextButton(
+                child: const Text('Tidak'),
                 onPressed: () {
-                  // Aksi: mulai mode berjalan
+                  Navigator.of(context).pop(); // Tutup dialog
                 },
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFF7ACE34), width: 1.5),
-                  foregroundColor: Color(0xFF7ACE34),
-                ),
-                child: const Text('Dengan berjalan'),
               ),
-            ),
+              TextButton(
+                child: const Text('Ya'),
+                onPressed: () {
+                  Navigator.of(context).pop(); // Tutup dialog
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AddMappingBerjalan()),
+                  );
+                },
+              ),
+            ],
+          );
+        },
+      );
+    },
+    style: OutlinedButton.styleFrom(
+      side: const BorderSide(color: Color(0xFF4CAF50), width: 1.5),
+      foregroundColor: const Color(0xFF4CAF50),
+    ),
+    child: const Text('Dengan berjalan'),
+  ),
+),
+
             const SizedBox(width: 12),
             Expanded(
               child: ElevatedButton(
@@ -117,7 +206,7 @@ class _AddMappingPageState extends State<AddMappingPage> {
                 },
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.white,
-                  backgroundColor: const Color(0xFF7ACE34),
+                  backgroundColor: const Color(0xFF4CAF50),
                 ),
                 child: const Text('Tambahkan batas'),
               ),

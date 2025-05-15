@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:projek_uas/screen/beranda.dart';
-import 'package:projek_uas/screen/detail/detailLahan.dart';
 import 'package:projek_uas/screen/kebunSaya.dart';
-import 'package:projek_uas/screen/hasilLaporan.dart';
+import 'package:projek_uas/screen/tips.dart';
 import 'package:projek_uas/screen/akun.dart';
 
 void main() async {
@@ -47,7 +46,7 @@ class _MyHomePageState extends State<MyHomePage> {
   final List<Widget> _pages = [
     Beranda(),
     MappingPage(),
-    HasilLaporan(),
+    TipsPage(),
     Akun(),
   ];
 
@@ -66,7 +65,7 @@ class _MyHomePageState extends State<MyHomePage> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         backgroundColor: const Color(0xFFF9F9F9),
-        selectedItemColor: const Color(0xFF7ACE34),
+        selectedItemColor: const Color(0xFF4CAF50),
         items: [
           BottomNavigationBarItem(
             icon: Image.asset(
@@ -96,7 +95,7 @@ class _MyHomePageState extends State<MyHomePage> {
               width: 20,
               height: 20,
             ),
-            label: 'Hasil Laporan',
+            label: 'Tips',
           ),
           BottomNavigationBarItem(
             icon: Image.asset(

@@ -147,7 +147,7 @@ class _DetailTambahLahanState extends State<DetailTambahLahan> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7ACE34),
+                backgroundColor: const Color(0xFF4CAF50),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
