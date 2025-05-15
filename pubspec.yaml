@@ -47,6 +47,7 @@ dependencies:
   intl: ^0.18.1
   auto_size_text: ^3.0.0
   flutter_native_splash: ^2.3.5
+  image_picker: ^1.0.4
   
 
 

@@ -15,19 +15,20 @@ class _BerandaState extends State<Beranda> {
     return Scaffold(
       backgroundColor: const Color.fromRGBO(247, 247, 247, 1),
       appBar: AppBar(
-        backgroundColor: const Color.fromRGBO(247, 247, 247, 1),
-        elevation: 0,
-        title: Row(
-          children: [
-            Image.asset('assets/logo.png', height: 28),
-            const SizedBox(width: 8),
-            const Text(
-              'PocketFarm',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ],
+          automaticallyImplyLeading: false,
+          backgroundColor: const Color.fromRGBO(247, 247, 247, 1),
+          elevation: 0,
+          title: Row(
+            children: [
+              Image.asset('assets/logo.png', height: 28),
+              const SizedBox(width: 8),
+              const Text(
+                'PocketFarm',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
         ),
-      ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         children: [

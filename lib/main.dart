@@ -3,11 +3,13 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:projek_uas/screen/beranda.dart';
 import 'package:projek_uas/screen/kebunSaya.dart';
 import 'package:projek_uas/screen/tips.dart';
-import 'package:projek_uas/screen/akun.dart';
+import 'package:projek_uas/screen/profile/akun.dart';
 import 'package:projek_uas/screen/splash_screen1.dart';
 import 'package:projek_uas/screen/splash_screen2.dart';
 import 'package:projek_uas/screen/LoginRegister/login_screen.dart';
 import 'package:projek_uas/screen/LoginRegister/register_screen.dart';
+
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +36,9 @@ class MyApp extends StatelessWidget {
         '/login': (context) => LoginScreen(),
         '/register': (context) => RegisterScreen(),
         '/home': (context) => const MyHomePage(title: 'Pocket Farm'),
+        '/Akun': (context) => const Akun(), // Tambahan ini
       },
+
     );
   }
 }
