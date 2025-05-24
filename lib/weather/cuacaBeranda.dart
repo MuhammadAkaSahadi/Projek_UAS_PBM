@@ -9,7 +9,7 @@ class CuacaBeranda extends StatefulWidget {
 
   @override
   State<CuacaBeranda> createState() => _CuacaBeranda();
-}
+} 
 
 class _CuacaBeranda extends State<CuacaBeranda> {
   final Map<String, Map<String, double>> daftarKota = {

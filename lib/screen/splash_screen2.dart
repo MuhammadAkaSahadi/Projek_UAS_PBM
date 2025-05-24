@@ -45,9 +45,10 @@ class _SplashScreenState extends State<SplashScreen2>
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
 
     Future.delayed(const Duration(milliseconds: 300), () {
       _mainController.forward();
@@ -100,7 +101,7 @@ class _SplashScreenState extends State<SplashScreen2>
             Opacity(
               opacity: _scaleAnimation.value < 1.2 ? 1.0 : 0.0,
               child: const Text(
-                'Pocketfarm',
+                'PocketFarm',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 20,

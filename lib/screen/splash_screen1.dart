@@ -57,7 +57,7 @@ class _SplashScreen1State extends State<SplashScreen1> {
               if (_animate) ...[
                 const SizedBox(width: 20),
                 const Text(
-                  'Pocketfarm',
+                  'PocketFarm',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,

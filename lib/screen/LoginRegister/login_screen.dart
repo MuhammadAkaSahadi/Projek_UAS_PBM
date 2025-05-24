@@ -1,7 +1,85 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  bool _isLoading = false;
+
+  Future<void> _login() async {
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Username dan password tidak boleh kosong'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse(
+          'http://192.168.43.143:5042/api/login/login',
+        ), // Run ini dulu di VS dotnet run --urls "http://0.0.0.0:5042"
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': username, 'password': password}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final token = data['token'];
+
+        // Decode JWT dan ambil role
+        final decodedToken = JwtDecoder.decode(token);
+        print('Decoded Token: $decodedToken');
+
+        final role =
+            decodedToken['role'] ??
+            decodedToken['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] ??
+            'user'; // fallback default
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('token', token);
+
+        // Arahkan sesuai role
+        if (role.toLowerCase() == 'admin') {
+          Navigator.pushReplacementNamed(context, '/admin');
+        } else {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+
+
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login gagal. Username atau password salah.'),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Terjadi kesalahan: $e')));
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +91,6 @@ class LoginScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Logo dan nama aplikasi
               Row(
                 children: [
                   Image.asset(
@@ -33,8 +110,6 @@ class LoginScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 32),
-
-              // Teks sambutan
               const Text(
                 'Selamat datang',
                 style: TextStyle(
@@ -46,22 +121,20 @@ class LoginScreen extends StatelessWidget {
               const SizedBox(height: 8),
               const Text(
                 'Senang bisa melihat anda kembali.\nMasuk ke akun anda',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 32),
 
-              // Input username
+              // Username
               const Text(
                 'Username',
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 8),
               TextField(
+                controller: _usernameController,
                 decoration: InputDecoration(
-                  prefixIcon: Icon(Icons.person_outline),
+                  prefixIcon: const Icon(Icons.person_outline),
                   hintText: 'Username',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -72,16 +145,17 @@ class LoginScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // Input password
+              // Password
               const Text(
                 'Password',
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 8),
               TextField(
+                controller: _passwordController,
                 obscureText: true,
                 decoration: InputDecoration(
-                  prefixIcon: Icon(Icons.lock_outline),
+                  prefixIcon: const Icon(Icons.lock_outline),
                   hintText: 'Password',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -92,14 +166,11 @@ class LoginScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              // Navigasi ke register
               Row(
                 children: [
                   const Text("Belum Punya Akun? "),
                   GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(context, '/register');
-                    },
+                    onTap: () => Navigator.pushNamed(context, '/register'),
                     child: const Text(
                       'Daftar',
                       style: TextStyle(
@@ -117,9 +188,7 @@ class LoginScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/home'); // <- masuk ke homepage
-                  },
+                  onPressed: _isLoading ? null : _login,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF7AC943),
                     shape: RoundedRectangleBorder(
@@ -127,14 +196,17 @@ class LoginScreen extends StatelessWidget {
                     ),
                     elevation: 2,
                   ),
-                  child: const Text(
-                    'MASUK',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
-                  ),
+                  child:
+                      _isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                            'MASUK',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                          ),
                 ),
               ),
             ],

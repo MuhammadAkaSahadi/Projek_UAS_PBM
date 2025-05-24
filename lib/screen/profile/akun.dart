@@ -1,13 +1,53 @@
+// import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:projek_uas/screen/profile/bantuan_screen.dart';
-import 'package:projek_uas/screen/profile/masukan_screen.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:projek_uas/screen/profile/bantuan_screen.dart';
+// import 'package:projek_uas/screen/profile/masukan_screen.dart';
 import 'package:projek_uas/screen/profile/pengaturan_screen.dart';
 import 'package:projek_uas/screen/profile/tentang_screen.dart';
 import '../../../widgets/profile_menu_item.dart';
 
-
-class Akun extends StatelessWidget {
+class Akun extends StatefulWidget {
   const Akun({super.key});
+
+  @override
+  State<Akun> createState() => _AkunState();
+}
+
+class _AkunState extends State<Akun> {
+  String _displayName = 'Loading...';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDisplayName();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Saat kembali dari pengaturan
+    Future.delayed(Duration.zero, () => _loadDisplayName());
+  }
+
+  Future<void> _loadDisplayName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token != null) {
+      final decoded = JwtDecoder.decode(token);
+      final defaultName =
+          decoded['username'] ??
+          decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ??
+          'User';
+      final customName = prefs.getString('display_name') ?? defaultName;
+
+      setState(() {
+        _displayName = customName;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,9 +67,9 @@ class Akun extends StatelessWidget {
               child: Icon(Icons.person, size: 60, color: Colors.white),
             ),
             const SizedBox(height: 10),
-            const Text(
-              "Anggun Mellanie",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+            Text(
+              _displayName,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 30),
             ProfileMenuItem(
@@ -52,51 +92,56 @@ class Akun extends StatelessWidget {
                 );
               },
             ),
-            ProfileMenuItem(
-              icon: Icons.help,
-              label: "Bantuan",
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const BantuanScreen()),
-                );
-              },
-            ),
-            ProfileMenuItem(
-              icon: Icons.feedback,
-              label: "Masukan",
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MasukanScreen()),
-                );
-              },
-            ),
+            // ProfileMenuItem(
+            //   icon: Icons.help,
+            //   label: "Bantuan",
+            //   onTap: () {
+            //     Navigator.push(
+            //       context,
+            //       MaterialPageRoute(builder: (_) => const BantuanScreen()),
+            //     );
+            //   },
+            // ),
+            // ProfileMenuItem(
+            //   icon: Icons.feedback,
+            //   label: "Masukan",
+            //   onTap: () {
+            //     Navigator.push(
+            //       context,
+            //       MaterialPageRoute(builder: (_) => const MasukanScreen()),
+            //     );
+            //   },
+            // ),
             ProfileMenuItem(
               icon: Icons.logout,
               label: "Keluar",
               onTap: () {
-                // Tambahkan logika logout di sini, misal: clear session, redirect login
                 showDialog(
                   context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text("Keluar"),
-                    content: const Text("Apakah Anda yakin ingin keluar?"),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text("Batal"),
+                  builder:
+                      (context) => AlertDialog(
+                        title: const Text("Keluar"),
+                        content: const Text("Apakah Anda yakin ingin keluar?"),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text("Batal"),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              final prefs =
+                                  await SharedPreferences.getInstance();
+                              await prefs.remove('token');
+                              Navigator.pushNamedAndRemoveUntil(
+                                context,
+                                '/login',
+                                (_) => false,
+                              );
+                            },
+                            child: const Text("Keluar"),
+                          ),
+                        ],
                       ),
-                      TextButton(
-                        onPressed: () {
-                          // Contoh aksi logout
-                          Navigator.pop(context); // tutup dialog
-                          Navigator.pop(context); // kembali ke layar sebelumnya
-                        },
-                        child: const Text("Keluar"),
-                      ),
-                    ],
-                  ),
                 );
               },
             ),

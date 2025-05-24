@@ -1,8 +1,12 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:projek_uas/pages/add_mapping_berjalan.dart';
+import 'package:projek_uas/screen/kebunSaya.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 class AddMappingPage extends StatefulWidget {
   const AddMappingPage({super.key});
@@ -17,11 +21,7 @@ class _AddMappingPageState extends State<AddMappingPage> {
   final MapController _mapController = MapController();
 
   Future<void> _getUserLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    // Cek apakah service lokasi aktif
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Layanan lokasi tidak aktif')),
@@ -29,14 +29,13 @@ class _AddMappingPageState extends State<AddMappingPage> {
       return;
     }
 
-    // Cek izin
-    permission = await Geolocator.checkPermission();
+    LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Izin lokasi ditolak')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Izin lokasi ditolak')));
         return;
       }
     }
@@ -48,16 +47,146 @@ class _AddMappingPageState extends State<AddMappingPage> {
       return;
     }
 
-    // Dapatkan lokasi saat ini
     Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
-
+      desiredAccuracy: LocationAccuracy.high,
+    );
     setState(() {
       userLocation = LatLng(position.latitude, position.longitude);
     });
 
-    // Pindahkan map ke lokasi user
     _mapController.move(userLocation!, 18);
+  }
+
+  LatLng _hitungCentroid(List<LatLng> points) {
+    double lat = 0.0;
+    double lng = 0.0;
+    for (var p in points) {
+      lat += p.latitude;
+      lng += p.longitude;
+    }
+    return LatLng(lat / points.length, lng / points.length);
+  }
+
+  Future<void> _submitPolygon() async {
+    if (polygonPoints.length < 3) {
+      _showMessage(
+        context,
+        "Minimal 3 titik diperlukan untuk membuat polygon.",
+      );
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    if (token == null || JwtDecoder.isExpired(token)) {
+      _showMessage(context, "Token tidak tersedia atau telah kadaluarsa.");
+      return;
+    }
+
+    final decoded = JwtDecoder.decode(token);
+    final userId = _extractUserIdFromToken(decoded);
+    if (userId == null) {
+      _showMessage(context, "ID pengguna tidak ditemukan dalam token.");
+      return;
+    }
+
+    final nama = prefs.getString('draft_nama_lahan');
+    final satuan = prefs.getString('draft_satuan_luas');
+    final luas = prefs.getDouble('draft_luas_lahan');
+
+    // Konversi koordinat ke JSON string
+    final lokasiList = prefs.getString('draft_lokasi_lahan');
+
+    final centroid = _hitungCentroid(polygonPoints);
+
+    if ([nama, satuan, luas].contains(null)) {
+      _showMessage(context, "Data lahan belum lengkap.");
+      return;
+    }
+
+    final lahanData = {
+      'Nama_Lahan': nama,
+      'Luas_Lahan': luas,
+      'Satuan_Luas': satuan,
+      'Koordinat': lokasiList,
+      'Centroid_Lat': centroid.latitude,
+      'Centroid_Lng': centroid.longitude,
+      'Id_Users': userId,
+    };
+
+    print("Data yang dikirim ke server:");
+    print(jsonEncode(lahanData));
+
+    final lahanRes = await http.post(
+      Uri.parse('http://192.168.43.143:5042/api/Laporan/lahan'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(lahanData),
+    );
+
+    if (lahanRes.statusCode != 200) {
+      String errorMsg = "Gagal menambahkan lahan.";
+      try {
+        if (lahanRes.body.isNotEmpty) {
+          final msgJson = jsonDecode(lahanRes.body);
+          errorMsg = msgJson['message'] ?? errorMsg;
+        }
+      } catch (e) {
+        errorMsg = "$errorMsg (Invalid JSON: $e)";
+      }
+      _showMessage(context, errorMsg);
+      return;
+    }
+
+    final lahanJson = jsonDecode(lahanRes.body);
+    final idLahan = lahanJson['id_lahan'];
+    if (idLahan == null) {
+      _showMessage(context, "ID lahan tidak ditemukan di respons server.");
+      return;
+    }
+
+    // Tampilkan snackbar
+    _showMessage(context, "Berhasil menyimpan lahan dengan ID: $idLahan");
+
+    // Navigasi ke halaman MappingPage (ganti dengan nama yang sesuai)
+    Future.delayed(const Duration(milliseconds: 500), () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) =>
+                  MappingPage(idLahan: idLahan), // ganti sesuai widget kamu
+        ),
+      );
+    });
+  }
+
+  void _showMessage(BuildContext context, String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  int? _extractUserIdFromToken(Map<String, dynamic> token) {
+    // Coba semua kemungkinan field ID
+    final possibleIdFields = [
+      'Id_Users', // Custom claim
+      'sub', // Standard JWT
+      'nameid',
+      'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier',
+      'userId', // Alternatif lain
+    ];
+
+    for (final field in possibleIdFields) {
+      final value = token[field];
+      if (value != null) {
+        if (value is int) return value;
+        if (value is String) return int.tryParse(value);
+      }
+    }
+
+    debugPrint('Token Structure: $token'); // Untuk debugging
+    return null;
   }
 
   @override
@@ -71,13 +200,25 @@ class _AddMappingPageState extends State<AddMappingPage> {
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
         elevation: 1,
+        actions: [
+          TextButton(
+            onPressed: _submitPolygon,
+            child: const Text(
+              'SIMPAN',
+              style: TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
       body: Stack(
         children: [
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              center: LatLng(-6.200000, 106.816666),
+              center: LatLng(-6.2, 106.816666),
               zoom: 16.0,
               onTap: (tapPosition, point) {
                 setState(() {
@@ -89,7 +230,7 @@ class _AddMappingPageState extends State<AddMappingPage> {
               TileLayer(
                 urlTemplate:
                     'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                userAgentPackageName: 'com.example.yourapp',
+                userAgentPackageName: 'com.example.app',
               ),
               if (polygonPoints.isNotEmpty)
                 PolygonLayer(
@@ -104,21 +245,14 @@ class _AddMappingPageState extends State<AddMappingPage> {
                 ),
               MarkerLayer(
                 markers: [
-                  // Titik-titik polygon
-                  ...polygonPoints.map((point) {
-                    return Marker(
+                  ...polygonPoints.map(
+                    (point) => Marker(
+                      point: point,
                       width: 20,
                       height: 20,
-                      point: point,
-                      child: const Icon(
-                        Icons.location_on,
-                        color: Colors.red,
-                        size: 20,
-                      ),
-                    );
-                  }),
-
-                  // Titik user (ikon merah besar)
+                      child: const Icon(Icons.location_on, color: Colors.red),
+                    ),
+                  ),
                   if (userLocation != null)
                     Marker(
                       point: userLocation!,
@@ -126,7 +260,7 @@ class _AddMappingPageState extends State<AddMappingPage> {
                       height: 40,
                       child: const Icon(
                         Icons.my_location,
-                        color: Colors.red,
+                        color: Colors.blue,
                         size: 30,
                       ),
                     ),
@@ -139,80 +273,9 @@ class _AddMappingPageState extends State<AddMappingPage> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _getUserLocation,
         label: const Text('Temukan saya'),
-        icon: Image.asset(
-          'assets/cursor.png', // Gunakan file PNG icon cursor
-          width: 20,
-          height: 20,
-        ),
+        icon: const Icon(Icons.gps_fixed, color: Colors.black),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
-        elevation: 4,
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(color: Color(0xFF4CAF50), width: 0.2),
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-  child: OutlinedButton(
-    onPressed: () {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Konfirmasi'),
-            content: const Text('Pastikan Anda sudah berada di lokasi lahan sebelum memulai pengukuran.'),
-            actions: [
-              TextButton(
-                child: const Text('Tidak'),
-                onPressed: () {
-                  Navigator.of(context).pop(); // Tutup dialog
-                },
-              ),
-              TextButton(
-                child: const Text('Ya'),
-                onPressed: () {
-                  Navigator.of(context).pop(); // Tutup dialog
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const AddMappingBerjalan()),
-                  );
-                },
-              ),
-            ],
-          );
-        },
-      );
-    },
-    style: OutlinedButton.styleFrom(
-      side: const BorderSide(color: Color(0xFF4CAF50), width: 1.5),
-      foregroundColor: const Color(0xFF4CAF50),
-    ),
-    child: const Text('Dengan berjalan'),
-  ),
-),
-
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {
-                  // Aksi: tambah titik secara manual
-                },
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: const Color(0xFF4CAF50),
-                ),
-                child: const Text('Tambahkan batas'),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:projek_uas/screen/admin/admin.dart';
 import 'package:projek_uas/screen/beranda.dart';
 import 'package:projek_uas/screen/kebunSaya.dart';
 import 'package:projek_uas/screen/tips.dart';
@@ -37,6 +38,7 @@ class MyApp extends StatelessWidget {
         '/register': (context) => RegisterScreen(),
         '/home': (context) => const MyHomePage(title: 'Pocket Farm'),
         '/Akun': (context) => const Akun(), // Tambahan ini
+        '/admin': (context) => const Admin(),
       },
 
     );
@@ -55,12 +57,12 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [
-    Beranda(),
-    MappingPage(),
-    TipsPage(),
-    Akun(),
-  ];
+final List<Widget> _pages = [
+  Beranda(),
+  const MappingPage(idLahan: null), // atau MappingPage()
+  TipsPage(),
+  Akun(),
+];
 
   void _onItemTapped(int index) {
     setState(() {

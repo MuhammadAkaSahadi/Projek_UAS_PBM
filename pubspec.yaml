@@ -48,6 +48,8 @@ dependencies:
   auto_size_text: ^3.0.0
   flutter_native_splash: ^2.3.5
   image_picker: ^1.0.4
+  shared_preferences: ^2.2.2
+  jwt_decoder: ^2.0.1
   
 
 
