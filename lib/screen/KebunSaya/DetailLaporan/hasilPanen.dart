@@ -60,8 +60,9 @@ class HasilPanenSection extends StatelessWidget {
                 lastDate: DateTime(2101),
               );
               if (pickedDate != null) {
+                // Format yyyy-MM-dd (ISO format yang diharapkan oleh backend)
                 tanggalPanenController.text =
-                    "${pickedDate.day}-${pickedDate.month}-${pickedDate.year}";
+                    pickedDate.toIso8601String().split('T').first;
               }
             },
           ),
@@ -86,9 +87,10 @@ class HasilPanenSection extends StatelessWidget {
                 flex: 1,
                 child: DropdownButtonFormField<String>(
                   value: satuanPanen,
-                  items: satuanPanenOptions.map((e) {
-                    return DropdownMenuItem(value: e, child: Text(e));
-                  }).toList(),
+                  items:
+                      satuanPanenOptions.map((e) {
+                        return DropdownMenuItem(value: e, child: Text(e));
+                      }).toList(),
                   onChanged: onSatuanPanenChanged,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
@@ -103,9 +105,10 @@ class HasilPanenSection extends StatelessWidget {
           // Kualitas Hasil
           DropdownButtonFormField<String>(
             value: kualitasHasil,
-            items: kualitasHasilOptions
-                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                .toList(),
+            items:
+                kualitasHasilOptions
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
             onChanged: onKualitasHasilChanged,
             decoration: const InputDecoration(
               labelText: 'Kualitas Hasil',

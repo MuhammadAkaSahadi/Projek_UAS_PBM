@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:projek_uas/screen/detail/detail_add_lahan.dart';
+import 'package:projek_uas/screen/KebunSaya/DetailLahan/detail_add_lahan.dart';
 import 'package:projek_uas/weather/cuacaBeranda.dart';
 
 class Beranda extends StatefulWidget {

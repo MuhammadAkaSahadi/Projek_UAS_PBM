@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:projek_uas/pages/add_mapping.dart';
+import 'package:projek_uas/screen/KebunSaya/add_mapping.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DetailTambahLahan extends StatefulWidget {
@@ -46,11 +46,21 @@ class _DetailTambahLahanState extends State<DetailTambahLahan> {
 
   Future<void> _simpanDataSementara() async {
     final nama = _namaLahanController.text.trim();
-    final ukuran = _ukuranLahanController.text.trim();
+    final ukuranText = _ukuranLahanController.text.trim();
 
-    if (nama.isEmpty || ukuran.isEmpty || _selectedLokasi == null) {
+    if (nama.isEmpty || ukuranText.isEmpty || _selectedLokasi == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Mohon lengkapi semua data.")),
+      );
+      return;
+    }
+
+    final ukuran = double.tryParse(ukuranText);
+    if (ukuran == null || ukuran <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Luas lahan harus berupa angka dan lebih dari 0."),
+        ),
       );
       return;
     }
@@ -58,15 +68,13 @@ class _DetailTambahLahanState extends State<DetailTambahLahan> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('draft_nama_lahan', nama);
     await prefs.setString('draft_lokasi_lahan', _selectedLokasi!);
-    await prefs.setDouble('draft_luas_lahan', double.parse(ukuran));
+    await prefs.setDouble('draft_luas_lahan', ukuran);
     await prefs.setString('draft_satuan_luas', _selectedSatuan);
 
     // lanjut ke halaman mapping
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const AddMappingPage(),
-      ),
+      MaterialPageRoute(builder: (context) => const AddMappingPage()),
     );
   }
 
@@ -95,7 +103,10 @@ class _DetailTambahLahanState extends State<DetailTambahLahan> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Informasi lahan", style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              "Informasi lahan",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: _namaLahanController,
@@ -105,9 +116,10 @@ class _DetailTambahLahanState extends State<DetailTambahLahan> {
             DropdownButtonFormField<String>(
               value: _selectedLokasi,
               onChanged: (value) => setState(() => _selectedLokasi = value),
-              items: _lokasiList.map((lokasi) {
-                return DropdownMenuItem(value: lokasi, child: Text(lokasi));
-              }).toList(),
+              items:
+                  _lokasiList.map((lokasi) {
+                    return DropdownMenuItem(value: lokasi, child: Text(lokasi));
+                  }).toList(),
               decoration: _inputDecoration("Lokasi lahan"),
             ),
             const SizedBox(height: 16),
@@ -126,10 +138,15 @@ class _DetailTambahLahanState extends State<DetailTambahLahan> {
                   flex: 2,
                   child: DropdownButtonFormField<String>(
                     value: _selectedSatuan,
-                    onChanged: (value) => setState(() => _selectedSatuan = value!),
-                    items: _satuanList.map((satuan) {
-                      return DropdownMenuItem(value: satuan, child: Text(satuan));
-                    }).toList(),
+                    onChanged:
+                        (value) => setState(() => _selectedSatuan = value!),
+                    items:
+                        _satuanList.map((satuan) {
+                          return DropdownMenuItem(
+                            value: satuan,
+                            child: Text(satuan),
+                          );
+                        }).toList(),
                     decoration: _inputDecoration("Satuan"),
                   ),
                 ),
@@ -155,7 +172,11 @@ class _DetailTambahLahanState extends State<DetailTambahLahan> {
               ),
               child: const Text(
                 'Mulai pemetaan',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.white),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),

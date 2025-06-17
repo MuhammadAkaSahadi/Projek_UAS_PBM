@@ -32,9 +32,12 @@ dependencies:
     sdk: flutter
   animations: ^2.0.8
   flutter_map: ^6.1.0
-  latlong2: 0.9.1
+  latlong2: ^0.9.1
   lucide_icons: ^0.257.0
-  
+  path_provider: ^2.0.14
+  provider: ^6.1.1
+  screenshot: ^3.0.0
+  http_parser: ^4.0.2
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -48,6 +51,7 @@ dependencies:
   auto_size_text: ^3.0.0
   flutter_native_splash: ^2.3.5
   image_picker: ^1.0.4
+  cached_network_image: ^3.3.1
   shared_preferences: ^2.2.2
   jwt_decoder: ^2.0.1
   

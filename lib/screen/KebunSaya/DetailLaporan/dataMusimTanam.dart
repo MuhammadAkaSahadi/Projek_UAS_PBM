@@ -3,24 +3,24 @@ import 'package:flutter/material.dart';
 class DataMusimTanamSection extends StatelessWidget {
   final TextEditingController tanggalTanamController;
   final TextEditingController jenisTanamanController;
-  final TextEditingController luasLahanController;
-  final String satuanLuas;
+  // final TextEditingController luasLahanController;
+  // final String satuanLuas;
   final String sumberBenih;
-  final List<String> satuanLuasOptions;
+  // final List<String> satuanLuasOptions;
   final List<String> sumberBenihOptions;
-  final ValueChanged<String?> onSatuanLuasChanged;
+  // final ValueChanged<String?> onSatuanLuasChanged;
   final ValueChanged<String?> onSumberBenihChanged;
 
   const DataMusimTanamSection({
     super.key,
     required this.tanggalTanamController,
     required this.jenisTanamanController,
-    required this.luasLahanController,
-    required this.satuanLuas,
+    // required this.luasLahanController,
+    // required this.satuanLuas,
     required this.sumberBenih,
-    required this.satuanLuasOptions,
+    // required this.satuanLuasOptions,
     required this.sumberBenihOptions,
-    required this.onSatuanLuasChanged,
+    // required this.onSatuanLuasChanged,
     required this.onSumberBenihChanged,
   });
 
@@ -58,8 +58,9 @@ class DataMusimTanamSection extends StatelessWidget {
                 lastDate: DateTime(2101),
               );
               if (pickedDate != null) {
+                // Format: yyyy-MM-dd (ISO format)
                 tanggalTanamController.text =
-                    "${pickedDate.day}-${pickedDate.month}-${pickedDate.year}";
+                    pickedDate.toIso8601String().split('T').first;
               }
             },
           ),
@@ -70,37 +71,6 @@ class DataMusimTanamSection extends StatelessWidget {
               labelText: 'Jenis Tanaman',
               border: OutlineInputBorder(),
             ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: TextFormField(
-                  controller: luasLahanController,
-                  decoration: const InputDecoration(
-                    labelText: 'Luas Lahan',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 1,
-                child: DropdownButtonFormField<String>(
-                  value: satuanLuas,
-                  items: satuanLuasOptions
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: onSatuanLuasChanged,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                ),
-              ),
-            ],
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(

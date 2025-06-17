@@ -5,8 +5,7 @@ class KegiatanPendampinganSection extends StatelessWidget {
   final TextEditingController materiPenyuluhanController;
   final TextEditingController kritikDanSaranController;
 
-
-  const KegiatanPendampinganSection ({
+  const KegiatanPendampinganSection({
     super.key,
     required this.tanggalKunjunganController,
     required this.materiPenyuluhanController,
@@ -47,8 +46,9 @@ class KegiatanPendampinganSection extends StatelessWidget {
                 lastDate: DateTime(2101),
               );
               if (pickedDate != null) {
+                // Format yyyy-MM-dd (ISO format yang diharapkan oleh backend)
                 tanggalKunjunganController.text =
-                    "${pickedDate.day}-${pickedDate.month}-${pickedDate.year}";
+                    pickedDate.toIso8601String().split('T').first;
               }
             },
           ),

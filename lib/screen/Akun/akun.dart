@@ -4,9 +4,9 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:projek_uas/screen/profile/bantuan_screen.dart';
 // import 'package:projek_uas/screen/profile/masukan_screen.dart';
-import 'package:projek_uas/screen/profile/pengaturan_screen.dart';
-import 'package:projek_uas/screen/profile/tentang_screen.dart';
-import '../../../widgets/profile_menu_item.dart';
+import 'package:projek_uas/screen/Akun/pengaturan_screen.dart';
+import 'package:projek_uas/screen/Akun/tentang_screen.dart';
+import 'profile_menu_item.dart';
 
 class Akun extends StatefulWidget {
   const Akun({super.key});
