@@ -310,7 +310,6 @@ class DetailLahanLogic {
 
     final inputProduksi = (laporan['inputProduksi'] as List).firstOrNull();
     return {
-      "Jenis Pupuk": inputProduksi?['jenis_pupuk'] ?? '-',
       "Jumlah Pupuk": formatNumber(
         inputProduksi?['jumlah_pupuk'],
         inputProduksi?['satuan_pupuk'] ?? '',
@@ -448,7 +447,6 @@ class DetailLahanLogic {
           title: const Text('Konfirmasi Hapus'),
           content: const Text(
             'Apakah Anda yakin ingin menghapus laporan ini? '
-            'Tindakan ini tidak dapat dibatalkan.',
           ),
           actions: [
             TextButton(

@@ -35,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final response = await http.post(
         Uri.parse(
-          'http://192.168.43.143:5042/api/login/login',
+          'http://192.168.1.2:5042/api/login/login',
         ), // Run ini dulu di VS dotnet run --urls "http://0.0.0.0:5042"
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'username': username, 'password': password}),

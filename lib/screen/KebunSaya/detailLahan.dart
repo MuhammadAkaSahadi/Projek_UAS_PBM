@@ -215,8 +215,6 @@ class _DetailLahanState extends State<DetailLahan> {
   }
 
   Widget buildImageGrid(List<String> imageUrls) {
-    if (imageUrls.isEmpty) return const SizedBox.shrink();
-
     return Container(
       margin: const EdgeInsets.only(top: 16),
       padding: const EdgeInsets.all(16),
@@ -245,29 +243,58 @@ class _DetailLahanState extends State<DetailLahan> {
             ),
           ),
           const SizedBox(height: 12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-            ),
-            itemCount: imageUrls.length,
-            itemBuilder: (context, index) {
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  imageUrls[index],
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: Colors.grey.shade200,
-                    child: const Icon(Icons.broken_image),
+          imageUrls.isEmpty
+              ? Container(
+                  width: double.infinity,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.image_outlined,
+                        size: 40,
+                        color: Colors.grey.shade500,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Gambar tidak ditambahkan',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                  ),
+                  itemCount: imageUrls.length,
+                  itemBuilder: (context, index) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        imageUrls[index],
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: Colors.grey.shade200,
+                          child: const Icon(Icons.broken_image),
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         ],
       ),
     );
@@ -362,6 +389,10 @@ class _DetailLahanState extends State<DetailLahan> {
                         buildHeaderImage(),
                         const SizedBox(height: 20),
 
+                        // Dokumentasi/Gambar - tampilkan di atas Informasi Lahan jika ada laporan
+                        if (!isLaporanEmpty && laporan != null)
+                          buildImageGrid(_logic.getImageUrls(laporan)),
+
                         // Informasi Lahan - selalu ditampilkan
                         buildSection(
                           "Informasi Lahan",
@@ -408,9 +439,6 @@ class _DetailLahanState extends State<DetailLahan> {
                             "Catatan Tambahan",
                             _logic.getCatatanData(laporan),
                           ),
-
-                          // Dokumentasi/Gambar
-                          buildImageGrid(_logic.getImageUrls(laporan)),
                         ],
 
                         const SizedBox(height: 80), // Space for FAB

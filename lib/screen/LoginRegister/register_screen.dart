@@ -41,7 +41,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.132.12.92:5042/api/login/register'),
+        Uri.parse('http://192.168.1.2:5042/api/login/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,

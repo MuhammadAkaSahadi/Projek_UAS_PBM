@@ -8,7 +8,7 @@ class LahanProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   
-  static const String baseUrl = 'http://192.168.43.143:5042/api/Laporan';
+  static const String baseUrl = 'http://192.168.1.2:5042/api/Laporan';
 
   List<Map<String, dynamic>> get lahanList => _lahanList;
   bool get isLoading => _isLoading;

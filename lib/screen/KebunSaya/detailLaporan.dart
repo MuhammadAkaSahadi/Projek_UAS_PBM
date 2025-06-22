@@ -40,7 +40,7 @@ class _DetailLaporanState extends State<DetailLaporan> {
         }
       },
     );
-    _logic.initialize();
+    _logic.initialize(context);
     _logic.initializeData(context, widget.idLahan, widget.isEdit);
   }
 
@@ -75,7 +75,7 @@ class _DetailLaporanState extends State<DetailLaporan> {
                 const Center(child: CircularProgressIndicator())
               else
                 _buildBody(),
-              if (laporanProvider.isLoading || _logic.imageHandler.isUploadingImages)
+              if (laporanProvider.isLoading || _logic.isUploadingImages)
                 _buildLoadingOverlay(),
             ],
           ),
@@ -130,12 +130,12 @@ class _DetailLaporanState extends State<DetailLaporan> {
 
   Widget _buildImageSection() {
     return ImageWidgets.buildImageSection(
-      totalImages: _logic.imageHandler.totalImages,
+      totalImages: _logic.totalImages,
       existingImageUrls: _logic.imageHandler.existingImageUrls,
       selectedImages: _logic.imageHandler.selectedImages,
-      isUploadingImages: _logic.imageHandler.isUploadingImages,
+      isUploadingImages: _logic.isUploadingImages,
       onAddImagePressed: () {
-        _logic.imageHandler.showImageSourceDialog(context);
+        _logic.showImagePicker();
       },
       onRemoveImage: (index, {bool isExisting = false}) {
         _logic.imageHandler.removeImage(index, isExisting: isExisting);
@@ -159,6 +159,7 @@ class _DetailLaporanState extends State<DetailLaporan> {
   Widget _buildInputProduksiSection() {
     return InputProduksiSection(
       jenisTanamanController: _logic.jenisTanamanController,
+      // ADDED: jenisPupuk field that was missing
       jumlahPupukController: _logic.jumlahPupukController,
       jumlahPestisidaController: _logic.jumlahPestisidaController,
       teknikPengolahanController: _logic.teknikPengolahanController,
@@ -188,7 +189,7 @@ class _DetailLaporanState extends State<DetailLaporan> {
   Widget _buildHasilPanenSection() {
     return HasilPanenSection(
       tanggalPanenController: _logic.tanggalPanenController,
-      satuanPanenController: _logic.satuanPanenController,
+      satuanPanenController: _logic.totalPanenController,
       kualitasHasilController: _logic.kualitasHasilController,
       satuanPanen: _logic.satuanPanen,
       kualitasHasil: _logic.kualitasHasil,
@@ -208,7 +209,7 @@ class _DetailLaporanState extends State<DetailLaporan> {
   Widget _buildSaveButton() {
     return Consumer<LaporanProvider>(
       builder: (context, laporanProvider, child) {
-        final isLoading = laporanProvider.isLoading || _logic.imageHandler.isUploadingImages;
+        final isLoading = laporanProvider.isLoading || _logic.isUploadingImages;
         
         return SizedBox(
           width: double.infinity,

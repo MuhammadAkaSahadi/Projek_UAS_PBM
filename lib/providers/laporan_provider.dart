@@ -9,7 +9,7 @@ class LaporanProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   
-  static const String baseUrl = 'http://192.168.43.143:5042/api/Laporan';
+  static const String baseUrl = 'http://192.168.1.2:5042/api/Laporan';
 
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -213,12 +213,35 @@ class LaporanProvider with ChangeNotifier {
     return laporan['laporan_lahan'] as Map<String, dynamic>?;
   }
 
-  // Simpan laporan lengkap - DIPERBAIKI sesuai format API
+  // Fungsi untuk menambah URL gambar ke data gambar
+  List<Map<String, dynamic>> _formatGambarData(List<String> imageUrls) {
+    return imageUrls.where((url) => url.isNotEmpty).map((url) => {
+      'Url_Gambar': url,
+    }).toList();
+  }
+
+  // Fungsi untuk validasi URL gambar
+  bool _isValidImageUrl(String url) {
+    if (url.isEmpty) return false;
+    
+    // Basic URL validation
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.hasAbsolutePath) return false;
+    
+    // Check if URL ends with image extension (optional)
+    final imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+    final lowerUrl = url.toLowerCase();
+    
+    return imageExtensions.any((ext) => lowerUrl.contains(ext)) || 
+           url.startsWith('http://') || url.startsWith('https://');
+  }
+
+  // Simpan laporan lengkap - DIPERBAIKI sesuai format API dengan support gambar
   Future<bool> saveLaporan({
     required String token,
     required int idLahan,
     required Map<String, dynamic> laporanData,
-    File? image,
+    List<String>? imageUrls, // Changed from File? image to List<String>? imageUrls
   }) async {
     _isLoading = true;
     _error = null;
@@ -228,6 +251,7 @@ class LaporanProvider with ChangeNotifier {
       print('=== SAVE LAPORAN DEBUG ===');
       print('Saving laporan for idLahan: $idLahan');
       print('LaporanData: $laporanData');
+      print('ImageUrls: $imageUrls');
 
       // LANGKAH 1: Buat laporan lahan dulu
       final laporanLahanResponse = await http.post(
@@ -263,8 +287,6 @@ class LaporanProvider with ChangeNotifier {
         requestBody['MusimTanam'] = {
           'Tanggal_Mulai_Tanam': musimTanam['tanggalTanam'] ?? DateTime.now().toIso8601String(),
           'Jenis_Tanaman': musimTanam['jenisTanaman'],
-          // 'Luas_Lahan': double.tryParse(musimTanam['luasLahan']?.toString() ?? '0') ?? 0.0,
-          // 'Satuan_Luas': musimTanam['satuanLuas'] ?? 'Hektar',
           'Sumber_Benih': musimTanam['sumberBenih'] ?? '',
         };
       }
@@ -319,10 +341,17 @@ class LaporanProvider with ChangeNotifier {
         };
       }
 
-      // Data Gambar
-      if (image != null) {
-        // Untuk sementara, kita skip gambar atau handle secara terpisah
-        // requestBody['Gambar'] = [...];
+      // Data Gambar - NEW: Support untuk multiple image URLs
+      if (imageUrls != null && imageUrls.isNotEmpty) {
+        final validUrls = imageUrls.where((url) => _isValidImageUrl(url)).toList();
+        
+        if (validUrls.isNotEmpty) {
+          requestBody['Gambar'] = _formatGambarData(validUrls);
+          print('✅ Added ${validUrls.length} valid image URLs to request');
+          print('Image URLs: $validUrls');
+        } else {
+          print('⚠️ No valid image URLs found');
+        }
       }
 
       print('Final Request Body: ${jsonEncode(requestBody)}');
@@ -405,12 +434,12 @@ class LaporanProvider with ChangeNotifier {
     }
   }
 
-  // Update laporan yang sudah ada (UPDATE) - DIPERBAIKI
+  // Update laporan yang sudah ada (UPDATE) - DIPERBAIKI dengan support gambar
   Future<bool> updateLaporan({
     required String token,
     required int idLaporanLahan,
     required Map<String, dynamic> laporanData,
-    File? image,
+    List<String>? imageUrls, // Changed from File? image to List<String>? imageUrls
   }) async {
     _isLoading = true;
     _error = null;
@@ -420,6 +449,7 @@ class LaporanProvider with ChangeNotifier {
       print('=== UPDATE LAPORAN DEBUG ===');
       print('Updating laporan with idLaporanLahan: $idLaporanLahan');
       print('LaporanData: $laporanData');
+      print('ImageUrls: $imageUrls');
 
       // Siapkan data untuk update dengan format yang benar
       final requestBody = <String, dynamic>{
@@ -432,8 +462,6 @@ class LaporanProvider with ChangeNotifier {
         requestBody['MusimTanam'] = {
           'Tanggal_Mulai_Tanam': musimTanam['tanggalTanam'],
           'Jenis_Tanaman': musimTanam['jenisTanaman'],
-          // 'Luas_Lahan': double.tryParse(musimTanam['luasLahan']?.toString() ?? '0') ?? 0.0,
-          // 'Satuan_Luas': musimTanam['satuanLuas'] ?? 'Hektar',
           'Sumber_Benih': musimTanam['sumberBenih'],
         };
       }
@@ -488,6 +516,19 @@ class LaporanProvider with ChangeNotifier {
         };
       }
 
+      // Data Gambar - NEW: Support untuk multiple image URLs dalam update
+      if (imageUrls != null && imageUrls.isNotEmpty) {
+        final validUrls = imageUrls.where((url) => _isValidImageUrl(url)).toList();
+        
+        if (validUrls.isNotEmpty) {
+          requestBody['Gambar'] = _formatGambarData(validUrls);
+          print('✅ Updated with ${validUrls.length} valid image URLs');
+          print('Image URLs: $validUrls');
+        } else {
+          print('⚠️ No valid image URLs found for update');
+        }
+      }
+
       print('Update Request Body: ${jsonEncode(requestBody)}');
 
       final response = await http.put(
@@ -540,6 +581,45 @@ class LaporanProvider with ChangeNotifier {
   int? getLaporanLahanId(int idLahan) {
     final laporan = _laporanCache[idLahan];
     return laporan?['laporan_lahan']?['id_laporan_lahan'];
+  }
+
+  // Method untuk mendapatkan daftar URL gambar
+  List<String> getImageUrls(int idLahan) {
+    final gambarList = getSectionData(idLahan, 'gambar');
+    return gambarList
+        .map((item) => item['url_gambar'] as String? ?? item['Url_Gambar'] as String? ?? '')
+        .where((url) => url.isNotEmpty)
+        .toList();
+  }
+
+  // Method untuk menambah URL gambar baru
+  void addImageUrl(int idLahan, String imageUrl) {
+    if (!_isValidImageUrl(imageUrl)) {
+      print('⚠️ Invalid image URL: $imageUrl');
+      return;
+    }
+
+    final laporan = _laporanCache[idLahan];
+    if (laporan != null) {
+      final gambarList = laporan['gambar'] as List<dynamic>? ?? [];
+      gambarList.add({'Url_Gambar': imageUrl});
+      laporan['gambar'] = gambarList;
+      notifyListeners();
+      print('✅ Image URL added to cache: $imageUrl');
+    }
+  }
+
+  // Method untuk menghapus URL gambar
+  void removeImageUrl(int idLahan, String imageUrl) {
+    final laporan = _laporanCache[idLahan];
+    if (laporan != null) {
+      final gambarList = laporan['gambar'] as List<dynamic>? ?? [];
+      gambarList.removeWhere((item) => 
+          item['url_gambar'] == imageUrl || item['Url_Gambar'] == imageUrl);
+      laporan['gambar'] = gambarList;
+      notifyListeners();
+      print('✅ Image URL removed from cache: $imageUrl');
+    }
   }
 
   // Hapus laporan (DELETE)
@@ -602,6 +682,9 @@ class LaporanProvider with ChangeNotifier {
       print('IdLahan $key: ${value.keys.toList()}');
       if (value['laporan_lahan'] != null) {
         print('  - Laporan Lahan ID: ${value['laporan_lahan']['id_laporan_lahan']}');
+      }
+      if (value['gambar'] != null && (value['gambar'] as List).isNotEmpty) {
+        print('  - Images: ${(value['gambar'] as List).length} items');
       }
     });
   }

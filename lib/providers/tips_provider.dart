@@ -9,7 +9,7 @@ class TipsProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   
-  static const String baseUrl = 'http://192.168.43.143:5042/api/Tips';
+  static const String baseUrl = 'http://192.168.1.2:5042/api/Tips';
 
   // Getters
   bool get isLoading => _isLoading;

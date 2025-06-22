@@ -37,7 +37,7 @@ class _MappingPageState extends State<MappingPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.43.143:5042/api/Laporan/lahan'),
+        Uri.parse('http://192.168.1.2:5042/api/Laporan/lahan'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -75,7 +75,7 @@ class _MappingPageState extends State<MappingPage> {
     try {
       // Cek apakah ada laporan untuk lahan ini
       final response = await http.get(
-        Uri.parse('http://192.168.1.13:5042/api/Laporan/laporan/$idLahan'),
+        Uri.parse('http://192.168.1.2:5042/api/Laporan/laporan/$idLahan'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -159,7 +159,7 @@ class _MappingPageState extends State<MappingPage> {
       // Gunakan endpoint delete lahan yang sudah dibuat
       // Endpoint ini akan menghapus lahan beserta semua laporan terkait
       final response = await http.delete(
-        Uri.parse('http://192.168.1.13:5042/api/Laporan/lahan/$idLahan'),
+        Uri.parse('http://192.168.1.2:5042/api/Laporan/lahan/$idLahan'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
