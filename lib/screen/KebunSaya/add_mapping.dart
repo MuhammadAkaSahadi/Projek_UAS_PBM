@@ -47,7 +47,14 @@ class _AddMappingPageState extends State<AddMappingPage> with SafeState {
   void _showMessage(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: const EdgeInsets.all(16),
+        ),
       );
     }
   }
@@ -57,10 +64,66 @@ class _AddMappingPageState extends State<AddMappingPage> with SafeState {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const MappingPage(idLahan: null), // Sesuaikan dengan kebutuhan
+          builder: (context) => const MappingPage(idLahan: null),
         ),
       );
     }
+  }
+
+  void _showClearConfirmation() {
+    if (_logic.polygonPoints.isEmpty) {
+      _showMessage("Tidak ada titik untuk dihapus");
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, 
+                   color: Colors.orange, size: 28),
+              const SizedBox(width: 12),
+              const Text(
+                'Konfirmasi Hapus',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Text(
+            'Apakah Anda yakin ingin menghapus semua ${_logic.polygonPoints.length} titik polygon?',
+            style: const TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _logic.clearAllPoints();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Hapus Semua'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -68,7 +131,9 @@ class _AddMappingPageState extends State<AddMappingPage> with SafeState {
     return Scaffold(
       appBar: _buildAppBar(),
       body: _buildBody(),
+      bottomNavigationBar: _buildBottomControls(),
       floatingActionButton: _buildFloatingActionButton(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
@@ -82,21 +147,29 @@ class _AddMappingPageState extends State<AddMappingPage> with SafeState {
       ),
       elevation: 1,
       actions: [
-        TextButton(
-          onPressed: _logic.isSubmitting ? null : _logic.submitPolygon,
-          child: _logic.isSubmitting
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text(
-                  'SIMPAN',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+        Container(
+          margin: const EdgeInsets.only(right: 8),
+          child: TextButton.icon(
+            onPressed: _logic.isSubmitting ? null : _logic.submitPolygon,
+            icon: _logic.isSubmitting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.save, size: 18),
+            label: const Text('SIMPAN'),
+            style: TextButton.styleFrom(
+              foregroundColor: _logic.isSubmitting ? Colors.grey : Colors.green,
+              backgroundColor: _logic.isSubmitting 
+                  ? Colors.grey.withOpacity(0.1) 
+                  : Colors.green.withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+          ),
         ),
       ],
     );
@@ -106,8 +179,191 @@ class _AddMappingPageState extends State<AddMappingPage> with SafeState {
     return Stack(
       children: [
         _buildMap(),
+        _buildPolygonStatus(),
         if (_logic.isSubmitting) _buildLoadingOverlay(),
       ],
+    );
+  }
+
+  Widget _buildPolygonStatus() {
+    return Positioned(
+      top: 16,
+      left: 16,
+      right: 16,
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: LinearGradient(
+              colors: [
+                Colors.green.shade50,
+                Colors.green.shade100,
+              ],
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _logic.isPolygonValid() 
+                      ? Colors.green 
+                      : Colors.orange,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _logic.isPolygonValid() 
+                      ? Icons.check 
+                      : Icons.location_on,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _logic.isPolygonValid() 
+                          ? 'Polygon Siap!' 
+                          : 'Menunggu Titik',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: _logic.isPolygonValid() 
+                            ? Colors.green.shade700 
+                            : Colors.orange.shade700,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Text(
+                      _logic.getPolygonStatus(),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomControls() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Row(
+          children: [
+            Expanded(
+              child: _buildControlButton(
+                icon: Icons.undo,
+                label: 'Undo',
+                onPressed: _logic.polygonPoints.isNotEmpty && !_logic.isSubmitting
+                    ? _logic.undoLastPoint
+                    : null,
+                color: Colors.orange,
+                subtitle: _logic.polygonPoints.isNotEmpty 
+                    ? 'Hapus titik terakhir' 
+                    : 'Tidak ada titik',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildControlButton(
+                icon: Icons.clear_all,
+                label: 'Clear All',
+                onPressed: _logic.polygonPoints.isNotEmpty && !_logic.isSubmitting
+                    ? _showClearConfirmation
+                    : null,
+                color: Colors.red,
+                subtitle: _logic.polygonPoints.isNotEmpty 
+                    ? 'Hapus semua titik' 
+                    : 'Tidak ada titik',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildControlButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback? onPressed,
+    required Color color,
+    required String subtitle,
+  }) {
+    final isEnabled = onPressed != null;
+    
+    return SizedBox(
+      height: 70,
+      child: Material(
+        color: isEnabled 
+            ? color.withOpacity(0.1) 
+            : Colors.grey.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      icon,
+                      color: isEnabled ? color : Colors.grey,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: isEnabled ? color : Colors.grey,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 10,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -161,16 +417,40 @@ class _AddMappingPageState extends State<AddMappingPage> with SafeState {
   }
 
   List<Marker> _buildPolygonMarkers() {
-    return _logic.polygonPoints
-        .map(
-          (point) => Marker(
-            point: point,
-            width: 20,
-            height: 20,
-            child: const Icon(Icons.location_on, color: Colors.red),
+    return _logic.polygonPoints.asMap().entries.map((entry) {
+      final index = entry.key;
+      final point = entry.value;
+      
+      return Marker(
+        point: point,
+        width: 30,
+        height: 30,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.red,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        )
-        .toList();
+          child: Center(
+            child: Text(
+              '${index + 1}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
+      );
+    }).toList();
   }
 
   Marker _buildUserLocationMarker() {
@@ -178,29 +458,59 @@ class _AddMappingPageState extends State<AddMappingPage> with SafeState {
       point: _logic.userLocation!,
       width: 40,
       height: 40,
-      child: const Icon(
-        Icons.my_location,
-        color: Colors.blue,
-        size: 30,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.blue,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 3),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blue.withOpacity(0.4),
+              blurRadius: 8,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.my_location,
+          color: Colors.white,
+          size: 20,
+        ),
       ),
     );
   }
 
   Widget _buildLoadingOverlay() {
     return Container(
-      color: Colors.black26,
-      child: const Center(
+      color: Colors.black54,
+      child: Center(
         child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(20),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text(
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                ),
+                const SizedBox(height: 16),
+                const Text(
                   'Menyimpan data lahan...',
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Mohon tunggu sebentar',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                  ),
                 ),
               ],
             ),
@@ -213,10 +523,17 @@ class _AddMappingPageState extends State<AddMappingPage> with SafeState {
   Widget _buildFloatingActionButton() {
     return FloatingActionButton.extended(
       onPressed: _logic.isSubmitting ? null : _logic.getUserLocation,
-      label: const Text('Temukan saya'),
-      icon: const Icon(Icons.gps_fixed, color: Colors.black),
+      label: const Text(
+        'Temukan Saya',
+        style: TextStyle(fontWeight: FontWeight.w600),
+      ),
+      icon: const Icon(Icons.gps_fixed),
       backgroundColor: _logic.isSubmitting ? Colors.grey : Colors.white,
-      foregroundColor: Colors.black,
+      foregroundColor: _logic.isSubmitting ? Colors.white : Colors.black,
+      elevation: 6,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
     );
   }
 }

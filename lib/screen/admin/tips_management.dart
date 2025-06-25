@@ -15,6 +15,15 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
   bool _isSearchMode = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Load tips when page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<TipsProvider>(context, listen: false).fetchAllTips();
+    });
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -100,6 +109,57 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
                   );
                 }
 
+                // Show error if exists
+                if (tipsProvider.error != null) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.red[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Terjadi Kesalahan',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.red[600],
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Text(
+                            tipsProvider.error!,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            tipsProvider.clearError();
+                            tipsProvider.fetchAllTips();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4CAF50),
+                          ),
+                          child: const Text(
+                            'Coba Lagi',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 if (tips.isEmpty) {
                   return Center(
                     child: Column(
@@ -153,6 +213,11 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _addNewTip(context),
+        backgroundColor: const Color(0xFF4CAF50),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
     );
   }
 
@@ -201,13 +266,13 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
                     ),
                   ),
                   PopupMenuButton<String>(
-                    onSelected: (value) {
+                    onSelected: (value) async {
                       switch (value) {
                         case 'edit':
-                          _editTip(context, tip);
+                          await _editTip(context, tip);
                           break;
                         case 'delete':
-                          _deleteTip(context, tip, tipsProvider);
+                          await _deleteTip(context, tip, tipsProvider);
                           break;
                       }
                     },
@@ -392,9 +457,9 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
             child: const Text('Tutup'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              _editTip(context, tip);
+              await _editTip(context, tip);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF4CAF50),
@@ -406,53 +471,80 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
     );
   }
 
-  void _editTip(BuildContext context, Map<String, dynamic> tip) {
-    // Navigate to edit tip page
-    // Implementasi ini tergantung pada bagaimana Anda ingin mengedit tip
-    // Bisa menggunakan Navigator.push ke halaman edit atau modal
-    print('Edit tip dengan ID: ${tip['id_tips']}');
+  Future<void> _addNewTip(BuildContext context) async {
+    // Check if user is logged in
+    final tipsProvider = Provider.of<TipsProvider>(context, listen: false);
+    final isLoggedIn = await tipsProvider.isLoggedIn();
+    
+    if (!isLoggedIn) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Anda harus login terlebih dahulu'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Navigate to add tip page - implement this according to your routing
+    // Example: Navigator.pushNamed(context, '/add-tip');
+    print('Navigate to add tip page');
   }
 
-  void _deleteTip(BuildContext context, Map<String, dynamic> tip, TipsProvider tipsProvider) {
-    showDialog(
+  Future<void> _editTip(BuildContext context, Map<String, dynamic> tip) async {
+    final tipsProvider = Provider.of<TipsProvider>(context, listen: false);
+    
+    // Check if user can update this tip
+    final canUpdate = await tipsProvider.canUserUpdateTip(tip['id_tips']);
+    
+    if (!canUpdate) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(tipsProvider.error ?? 'Anda tidak memiliki izin untuk mengedit tip ini'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Navigate to edit tip page with tip data
+    // Example: Navigator.pushNamed(context, '/edit-tip', arguments: tip);
+    print('Navigate to edit tip page with ID: ${tip['id_tips']}');
+  }
+
+  Future<void> _deleteTip(BuildContext context, Map<String, dynamic> tip, TipsProvider tipsProvider) async {
+    // Check if user can delete this tip
+    final canDelete = await tipsProvider.canUserUpdateTip(tip['id_tips']);
+    
+    if (!canDelete) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(tipsProvider.error ?? 'Anda tidak memiliki izin untuk menghapus tip ini'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show confirmation dialog
+    final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Konfirmasi Hapus'),
         content: Text('Apakah Anda yakin ingin menghapus tips "${tip['judul']}"?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Batal'),
           ),
           ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              
-              // Untuk demo, kita anggap token sudah ada
-              // Dalam implementasi nyata, ambil token dari auth provider
-              const token = 'your_token_here';
-              
-              final success = await tipsProvider.deleteTip(
-                token: token,
-                idTips: tip['id_tips'],
-              );
-              
-              if (success && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Tips berhasil dihapus'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } else if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(tipsProvider.error ?? 'Gagal menghapus tips'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
+            onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
             ),
@@ -461,5 +553,51 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
         ],
       ),
     );
+
+    if (shouldDelete == true) {
+      // Show loading dialog
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 20),
+                Text('Menghapus tips...'),
+              ],
+            ),
+          ),
+        );
+      }
+
+      // Delete the tip
+      final success = await tipsProvider.deleteTip(idTips: tip['id_tips']);
+      
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+      
+      // Show result message
+      if (context.mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tips berhasil dihapus'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(tipsProvider.error ?? 'Gagal menghapus tips'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 }
