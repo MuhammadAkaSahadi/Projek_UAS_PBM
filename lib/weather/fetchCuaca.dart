@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class CuacaService {
-  static const String apiKey = '8594ce6a201450a42a8f6ac8da65435a';
+  static const String apiKey = '09bddf0cf3d1d982f219d02093ee2092';
 
   // Ambil data cuaca saat ini
   static Future<Map<String, dynamic>> getCurrentWeather(double lat, double lon) async {

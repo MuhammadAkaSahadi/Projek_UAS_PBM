@@ -23,7 +23,7 @@ class DetailLaporanLogic {
       TextEditingController();
   final TextEditingController tanggalPanenController = TextEditingController();
   final TextEditingController totalPanenController =
-      TextEditingController(); // FIXED: renamed from satuanPanenController
+      TextEditingController();
   final TextEditingController kualitasHasilController = TextEditingController();
   final TextEditingController deskripsiCatatanController =
       TextEditingController();
@@ -37,7 +37,7 @@ class DetailLaporanLogic {
   String sumberBenih = 'Mandiri';
   String satuanPupuk = 'Kg';
   String satuanPestisida = 'L';
-  String satuanPanen = 'Kg'; // FIXED: default changed to match provider
+  String satuanPanen = 'Kg';
   String kualitasHasil = 'Bagus';
 
   // Dropdown options
@@ -52,7 +52,7 @@ class DetailLaporanLogic {
   final List<String> satuanPanenOptions = [
     'Kg',
     'Ton',
-  ]; // FIXED: consistent with provider
+  ];
   final List<String> kualitasHasilOptions = ['Bagus', 'Sedang', 'Rusak'];
 
   // Callback untuk update UI
@@ -70,7 +70,7 @@ class DetailLaporanLogic {
     );
   }
 
-  // Initialize data
+  // FIXED: Initialize data dengan token parameter
   Future<void> initializeData(
     BuildContext context,
     int idLahan,
@@ -84,25 +84,37 @@ class DetailLaporanLogic {
     onStateChanged?.call();
   }
 
-  // Load existing data
+  // FIXED: Load existing data dengan token parameter
   Future<void> loadExistingData(BuildContext context, int idLahan) async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        print('❌ Token tidak ditemukan saat load existing data');
+        return;
+      }
+
       final laporanProvider = Provider.of<LaporanProvider>(
         context,
         listen: false,
       );
 
-      await laporanProvider.fetchLaporan(idLahan);
+      // FIXED: Pass token to fetchLaporan
+      await laporanProvider.fetchLaporan(idLahan, token);
       final laporan = laporanProvider.getLaporan(idLahan);
       if (laporan != null) {
         populateFormFromExistingData(laporan);
+        print('✅ Data existing berhasil dimuat untuk idLahan: $idLahan');
+      } else {
+        print('⚠️ Tidak ada data laporan untuk idLahan: $idLahan');
       }
     } catch (e) {
-      print('Error loading existing data: $e');
+      print('❌ Error loading existing data: $e');
     }
   }
 
-  // FIXED: Extract image URLs using the same logic as DetailLahanLogic
+  // Extract image URLs using the same logic as DetailLahanLogic
   List<String> _getImageUrls(Map<String, dynamic> laporan) {
     List<String> imageUrls = [];
 
@@ -140,7 +152,8 @@ class DetailLaporanLogic {
             url = gambar['url_gambar'] ??
                 gambar['url'] ??
                 gambar['image_url'] ??
-                gambar['gambar'];
+                gambar['gambar'] ??
+                gambar['Url_Gambar']; // FIXED: Added capital case
           }
 
           if (url != null &&
@@ -184,7 +197,7 @@ class DetailLaporanLogic {
     return imageUrls;
   }
 
-  // FIXED: Helper method to validate URLs
+  // Helper method to validate URLs
   bool _isValidUrl(String url) {
     try {
       final uri = Uri.parse(url);
@@ -317,7 +330,7 @@ class DetailLaporanLogic {
             '';
       }
 
-      // FIXED: Load existing images using local method instead of provider method
+      // Load existing images using local method instead of provider method
       List<String> existingImages = _getImageUrls(laporan);
 
       if (existingImages.isNotEmpty) {
@@ -357,7 +370,7 @@ class DetailLaporanLogic {
     }
   }
 
-  // Validate form - FIXED controller reference
+  // Validate form
   bool validateForm(BuildContext context) {
     if (tanggalTanamController.text.isEmpty ||
         jenisTanamanController.text.isEmpty ||
@@ -370,7 +383,6 @@ class DetailLaporanLogic {
         deskripsiKendalaController.text.isEmpty ||
         tanggalPanenController.text.isEmpty ||
         totalPanenController.text.isEmpty) {
-      // FIXED: use totalPanenController
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Semua field harus diisi.")));
@@ -392,7 +404,6 @@ class DetailLaporanLogic {
     }
 
     if (double.tryParse(totalPanenController.text) == null) {
-      // FIXED: use totalPanenController
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Total hasil panen harus berupa angka.")),
       );
@@ -402,7 +413,7 @@ class DetailLaporanLogic {
     return true;
   }
 
-  // Prepare laporan data - FIXED to match provider's expected structure
+  // FIXED: Prepare laporan data dengan field yang sesuai API
   Map<String, dynamic> prepareLaporanData() {
     return {
       'musimTanam': {
@@ -411,6 +422,7 @@ class DetailLaporanLogic {
         'sumberBenih': sumberBenih,
       },
       'inputProduksi': {
+        'jenisPupuk': 'Tidak Diketahui', // FIXED: Added required field
         'jumlahPupuk': double.tryParse(jumlahPupukController.text) ?? 0.0,
         'satuanPupuk': satuanPupuk,
         'jumlahPestisida':
@@ -426,9 +438,7 @@ class DetailLaporanLogic {
       'kendala': {'deskripsi': deskripsiKendalaController.text},
       'hasilPanen': {
         'tanggalPanen': formatTanggal(tanggalPanenController.text),
-        'totalPanen':
-            double.tryParse(totalPanenController.text) ??
-            0.0, // FIXED: use totalPanenController
+        'totalPanen': double.tryParse(totalPanenController.text) ?? 0.0,
         'satuanPanen': satuanPanen,
         'kualitas': kualitasHasil,
       },
@@ -436,7 +446,7 @@ class DetailLaporanLogic {
     };
   }
 
-  // Save laporan - FIXED to use provider's imageUrls parameter correctly
+  // FIXED: Save laporan dengan token handling yang proper
   Future<bool> saveLaporan(
     BuildContext context,
     int idLahan,
@@ -519,10 +529,7 @@ class DetailLaporanLogic {
           token: token,
           idLaporanLahan: idLaporanLahan,
           laporanData: laporanData,
-          imageUrls:
-              uniqueImageUrls.isNotEmpty
-                  ? uniqueImageUrls
-                  : null, // FIXED: use imageUrls parameter
+          imageUrls: uniqueImageUrls.isNotEmpty ? uniqueImageUrls : null,
         );
       } else {
         // Mode create - gunakan save
@@ -530,10 +537,7 @@ class DetailLaporanLogic {
           token: token,
           idLahan: idLahan,
           laporanData: laporanData,
-          imageUrls:
-              uniqueImageUrls.isNotEmpty
-                  ? uniqueImageUrls
-                  : null, // FIXED: use imageUrls parameter
+          imageUrls: uniqueImageUrls.isNotEmpty ? uniqueImageUrls : null,
         );
       }
 
@@ -654,7 +658,7 @@ class DetailLaporanLogic {
     kritikDanSaranController.dispose();
     deskripsiKendalaController.dispose();
     tanggalPanenController.dispose();
-    totalPanenController.dispose(); // FIXED: dispose correct controller
+    totalPanenController.dispose();
     kualitasHasilController.dispose();
     deskripsiCatatanController.dispose();
 

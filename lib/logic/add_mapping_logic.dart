@@ -203,7 +203,7 @@ class AddMappingLogic {
         return;
       }
 
-      final uri = Uri.parse("http://192.168.1.2:5042/api/Laporan/polygon-image");
+      final uri = Uri.parse("http://192.168.43.143:5042/api/Laporan/polygon-image");
 
       final body = {
         "Nama_Lahan": nama,

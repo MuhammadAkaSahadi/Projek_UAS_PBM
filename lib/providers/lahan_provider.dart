@@ -2,18 +2,93 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:projek_uas/providers/auth_provider.dart';
+import 'package:projek_uas/helper/auth_helper.dart';
 
 class LahanProvider with ChangeNotifier {
   List<Map<String, dynamic>> _lahanList = [];
   bool _isLoading = false;
   String? _error;
   
-  static const String baseUrl = 'http://192.168.1.2:5042/api/Laporan';
+  static const String baseUrl = 'http://192.168.43.143:5042/api/Laporan';
 
+  // Getter untuk mengakses AuthProvider
+  AuthProvider? _authProvider;
+  
+  // Method untuk set AuthProvider reference
+  void setAuthProvider(AuthProvider authProvider) {
+    _authProvider = authProvider;
+  }
+
+  // Getters
   List<Map<String, dynamic>> get lahanList => _lahanList;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isEmpty => _lahanList.isEmpty;
+
+  // Helper method untuk mendapatkan token dengan konsisten
+  Future<String?> _getAuthToken() async {
+    try {
+      // Prioritas 1: Gunakan AuthProvider jika tersedia
+      if (_authProvider != null) {
+        return _authProvider!.token;
+      }
+      
+      // Prioritas 2: Gunakan AuthHelper sebagai fallback
+      return await AuthHelper.getToken();
+    } catch (e) {
+      print('Error getting auth token: $e');
+      return null;
+    }
+  }
+
+  // Helper method untuk mendapatkan user ID
+  Future<int?> _getCurrentUserId() async {
+    try {
+      // Prioritas 1: Gunakan AuthProvider jika tersedia
+      if (_authProvider != null) {
+        return _authProvider!.userId;
+      }
+      
+      // Prioritas 2: Gunakan AuthHelper sebagai fallback
+      return await AuthHelper.getCurrentUserId();
+    } catch (e) {
+      print('Error getting current user ID: $e');
+      return null;
+    }
+  }
+
+  // Helper method untuk mendapatkan auth headers
+  Future<Map<String, String>> _getAuthHeaders() async {
+    final token = await _getAuthToken();
+    
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    
+    return headers;
+  }
+
+  // Helper method untuk validasi autentikasi
+  Future<bool> _validateAuthentication() async {
+    try {
+      // Prioritas 1: Gunakan AuthProvider jika tersedia
+      if (_authProvider != null) {
+        return _authProvider!.isAuthenticated;
+      }
+      
+      // Prioritas 2: Gunakan AuthHelper sebagai fallback
+      return await AuthHelper.isAuthenticated();
+    } catch (e) {
+      print('Error validating authentication: $e');
+      return false;
+    }
+  }
 
   // Method untuk normalisasi data dari API
   Map<String, dynamic> _normalizeLahanData(Map<String, dynamic> rawData) {
@@ -31,19 +106,30 @@ class LahanProvider with ChangeNotifier {
     };
   }
 
-  // Fetch semua lahan
-  Future<void> fetchLahan(String token) async {
+  // Fetch semua lahan (revised)
+  Future<void> fetchLahan() async {
+    print('=== FETCH LAHAN AUTH CHECK ===');
+    
+    // Validasi authentication
+    final isAuthenticated = await _validateAuthentication();
+    if (!isAuthenticated) {
+      _error = 'Anda harus login terlebih dahulu untuk mengakses data lahan.';
+      print('❌ Authentication required');
+      notifyListeners();
+      return;
+    }
+
+    print('✅ Authentication validated');
+
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
+      final headers = await _getAuthHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/lahan'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
+        headers: headers,
       );
 
       print('=== FETCH LAHAN DEBUG ===');
@@ -73,6 +159,12 @@ class LahanProvider with ChangeNotifier {
           print('Lahan $i: ${_lahanList[i]}');
         }
         
+      } else if (response.statusCode == 401) {
+        _error = 'Token tidak valid atau sudah kadaluarsa. Silakan login kembali.';
+        print('❌ Unauthorized access');
+      } else if (response.statusCode == 403) {
+        _error = 'Akses ditolak. Anda tidak memiliki izin untuk mengakses data lahan.';
+        print('❌ Forbidden access');
       } else {
         _error = 'Gagal mengambil data: ${response.statusCode} - ${response.body}';
         print('Error: $_error');
@@ -86,18 +178,43 @@ class LahanProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Tambah lahan baru
+  // Tambah lahan baru (revised)
   Future<bool> addLahan({
-    required String token,
     required String namaLahan,
     required double luasLahan,
     required String satuanLuas,
     required String koordinat,
     required double centroidLat,
     required double centroidLng,
-    required int userId,
     required String polygonImg,
+    int? customUserId, // Optional, jika tidak diisi akan menggunakan current user
   }) async {
+    print('=== ADD LAHAN AUTH CHECK ===');
+    
+    // Validasi authentication
+    final isAuthenticated = await _validateAuthentication();
+    if (!isAuthenticated) {
+      _error = 'Anda harus login terlebih dahulu untuk menambah lahan.';
+      print('❌ Authentication required');
+      notifyListeners();
+      return false;
+    }
+
+    // Dapatkan user ID
+    final userId = customUserId ?? await _getCurrentUserId();
+    if (userId == null) {
+      _error = 'Gagal mendapatkan informasi user';
+      print('❌ Failed to get user ID');
+      notifyListeners();
+      return false;
+    }
+
+    print('✅ Authentication validated, User ID: $userId');
+
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
     try {
       final body = {
         "Nama_Lahan": namaLahan,
@@ -113,12 +230,10 @@ class LahanProvider with ChangeNotifier {
       print('=== ADD LAHAN REQUEST ===');
       print('Body: ${jsonEncode(body)}');
 
+      final headers = await _getAuthHeaders();
       final response = await http.post(
         Uri.parse("$baseUrl/polygon-image"),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
+        headers: headers,
         body: jsonEncode(body),
       );
 
@@ -141,44 +256,170 @@ class LahanProvider with ChangeNotifier {
         });
         
         _lahanList.add(newLahan);
+        _error = null;
+        _isLoading = false;
         notifyListeners();
         return true;
+      } else if (response.statusCode == 401) {
+        _error = 'Token tidak valid atau sudah kadaluarsa. Silakan login kembali.';
+      } else if (response.statusCode == 403) {
+        _error = 'Akses ditolak. Anda tidak memiliki izin untuk menambah lahan.';
       } else {
         _error = 'Gagal menambah lahan: ${response.statusCode} - ${response.body}';
-        notifyListeners();
       }
       
+      _isLoading = false;
+      notifyListeners();
       return false;
     } catch (e) {
       _error = 'Gagal menambah lahan: $e';
+      _isLoading = false;
       notifyListeners();
       return false;
     }
   }
 
-  // Hapus lahan
-  Future<bool> deleteLahan(String token, int idLahan) async {
+  // Hapus lahan (revised)
+  Future<bool> deleteLahan(int idLahan) async {
+    print('=== DELETE LAHAN AUTH CHECK ===');
+    
+    // Validasi authentication
+    final isAuthenticated = await _validateAuthentication();
+    if (!isAuthenticated) {
+      _error = 'Anda harus login terlebih dahulu untuk menghapus lahan.';
+      print('❌ Authentication required');
+      notifyListeners();
+      return false;
+    }
+
+    print('✅ Authentication validated');
+
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
     try {
+      final headers = await _getAuthHeaders();
       final response = await http.delete(
         Uri.parse('$baseUrl/lahan/$idLahan'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
+        headers: headers,
       );
+
+      print('Delete Lahan Response: ${response.statusCode} - ${response.body}');
 
       if (response.statusCode == 200) {
         _lahanList.removeWhere((lahan) => lahan['id_lahan'] == idLahan);
+        _error = null;
+        _isLoading = false;
         notifyListeners();
         return true;
+      } else if (response.statusCode == 401) {
+        _error = 'Token tidak valid atau sudah kadaluarsa. Silakan login kembali.';
+      } else if (response.statusCode == 403) {
+        _error = 'Akses ditolak. Anda tidak memiliki izin untuk menghapus lahan.';
+      } else if (response.statusCode == 404) {
+        _error = 'Lahan tidak ditemukan.';
       } else {
         _error = 'Gagal menghapus lahan: ${response.statusCode} - ${response.body}';
-        notifyListeners();
       }
       
+      _isLoading = false;
+      notifyListeners();
       return false;
     } catch (e) {
       _error = 'Gagal menghapus lahan: $e';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Update lahan (revised)
+  Future<bool> updateLahan({
+    required int idLahan,
+    required String namaLahan,
+    required double luasLahan,
+    required String satuanLuas,
+    required String koordinat,
+    double? centroidLat,
+    double? centroidLng,
+  }) async {
+    print('=== UPDATE LAHAN AUTH CHECK ===');
+    
+    // Validasi authentication
+    final isAuthenticated = await _validateAuthentication();
+    if (!isAuthenticated) {
+      _error = 'Anda harus login terlebih dahulu untuk mengupdate lahan.';
+      print('❌ Authentication required');
+      notifyListeners();
+      return false;
+    }
+
+    print('✅ Authentication validated');
+
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final body = {
+        "nama_lahan": namaLahan,
+        "luas_lahan": luasLahan,
+        "satuan_luas": satuanLuas,
+        "koordinat": koordinat,
+      };
+
+      // Tambahkan centroid jika ada
+      if (centroidLat != null) body["centroid_lat"] = centroidLat;
+      if (centroidLng != null) body["centroid_lng"] = centroidLng;
+
+      print('=== UPDATE LAHAN REQUEST ===');
+      print('ID Lahan: $idLahan');
+      print('Body: ${jsonEncode(body)}');
+
+      final headers = await _getAuthHeaders();
+      final response = await http.put(
+        Uri.parse('$baseUrl/lahan/$idLahan'),
+        headers: headers,
+        body: jsonEncode(body),
+      );
+
+      print('Update Lahan Response: ${response.statusCode} - ${response.body}');
+
+      if (response.statusCode == 200) {
+        // Update local data dengan struktur yang konsisten
+        final index = _lahanList.indexWhere((lahan) => lahan['id_lahan'] == idLahan);
+        if (index != -1) {
+          _lahanList[index] = _normalizeLahanData({
+            ..._lahanList[index], // Preserve existing data
+            'nama_lahan': namaLahan,
+            'luas_lahan': luasLahan,
+            'satuan_luas': satuanLuas,
+            'koordinat': koordinat,
+            if (centroidLat != null) 'centroid_lat': centroidLat,
+            if (centroidLng != null) 'centroid_lng': centroidLng,
+          });
+        }
+        _error = null;
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else if (response.statusCode == 401) {
+        _error = 'Token tidak valid atau sudah kadaluarsa. Silakan login kembali.';
+      } else if (response.statusCode == 403) {
+        _error = 'Akses ditolak. Anda tidak memiliki izin untuk mengupdate lahan.';
+      } else if (response.statusCode == 404) {
+        _error = 'Lahan tidak ditemukan.';
+      } else {
+        _error = 'Gagal mengupdate lahan: ${response.statusCode} - ${response.body}';
+      }
+      
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = 'Gagal mengupdate lahan: $e';
+      _isLoading = false;
       notifyListeners();
       return false;
     }
@@ -201,65 +442,27 @@ class LahanProvider with ChangeNotifier {
     }
   }
 
-  // Update lahan
-  Future<bool> updateLahan({
-    required String token,
-    required int idLahan,
-    required String namaLahan,
-    required double luasLahan,
-    required String satuanLuas,
-    required String koordinat,
-    double? centroidLat,
-    double? centroidLng,
-  }) async {
-    try {
-      final body = {
-        "nama_lahan": namaLahan,
-        "luas_lahan": luasLahan,
-        "satuan_luas": satuanLuas,
-        "koordinat": koordinat,
-      };
+  // Check if user is authenticated
+  Future<bool> isAuthenticated() async {
+    return await _validateAuthentication();
+  }
 
-      // Tambahkan centroid jika ada
-      if (centroidLat != null) body["centroid_lat"] = centroidLat;
-      if (centroidLng != null) body["centroid_lng"] = centroidLng;
+  // Get current user ID
+  Future<int?> getCurrentUserId() async {
+    return await _getCurrentUserId();
+  }
 
-      final response = await http.put(
-        Uri.parse('$baseUrl/lahan/$idLahan'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(body),
-      );
+  // Get lahan by current user
+  Future<List<Map<String, dynamic>>> getLahanByCurrentUser() async {
+    final userId = await _getCurrentUserId();
+    if (userId == null) return [];
+    
+    return _lahanList.where((lahan) => lahan['id_users'] == userId).toList();
+  }
 
-      if (response.statusCode == 200) {
-        // Update local data dengan struktur yang konsisten
-        final index = _lahanList.indexWhere((lahan) => lahan['id_lahan'] == idLahan);
-        if (index != -1) {
-          _lahanList[index] = _normalizeLahanData({
-            ..._lahanList[index], // Preserve existing data
-            'nama_lahan': namaLahan,
-            'luas_lahan': luasLahan,
-            'satuan_luas': satuanLuas,
-            'koordinat': koordinat,
-            if (centroidLat != null) 'centroid_lat': centroidLat,
-            if (centroidLng != null) 'centroid_lng': centroidLng,
-          });
-          notifyListeners();
-        }
-        return true;
-      } else {
-        _error = 'Gagal mengupdate lahan: ${response.statusCode} - ${response.body}';
-        notifyListeners();
-      }
-      
-      return false;
-    } catch (e) {
-      _error = 'Gagal mengupdate lahan: $e';
-      notifyListeners();
-      return false;
-    }
+  // Get lahan by user ID
+  List<Map<String, dynamic>> getLahanByUser(int userId) {
+    return _lahanList.where((lahan) => lahan['id_users'] == userId).toList();
   }
 
   // Helper methods untuk format data
@@ -343,15 +546,33 @@ class LahanProvider with ChangeNotifier {
     print('============================');
   }
 
+  // Debug method untuk melihat auth state
+  Future<void> debugAuthState() async {
+    print('=== LAHAN PROVIDER AUTH DEBUG ===');
+    print('AuthProvider available: ${_authProvider != null}');
+    if (_authProvider != null) {
+      print('AuthProvider - Authenticated: ${_authProvider!.isAuthenticated}');
+      print('AuthProvider - User ID: ${_authProvider!.userId}');
+      print('AuthProvider - Username: ${_authProvider!.username}');
+      print('AuthProvider - User Role: ${_authProvider!.userRole}');
+    }
+    
+    print('AuthHelper - Authenticated: ${await AuthHelper.isAuthenticated()}');
+    print('AuthHelper - User ID: ${await AuthHelper.getCurrentUserId()}');
+    print('AuthHelper - Username: ${await AuthHelper.getCurrentUsername()}');
+    print('AuthHelper - User Role: ${await AuthHelper.getCurrentUserRole()}');
+    print('==================================');
+  }
+
   // Clear error
   void clearError() {
     _error = null;
     notifyListeners();
   }
 
-  // Refresh data
-  Future<void> refresh(String token) async {
-    await fetchLahan(token);
+  // Refresh data (revised)
+  Future<void> refresh() async {
+    await fetchLahan();
   }
 
   // Clear all data (for logout)
@@ -388,5 +609,60 @@ class LahanProvider with ChangeNotifier {
       final namaLahan = (lahan['nama_lahan'] ?? '').toString().toLowerCase();
       return namaLahan.contains(query.toLowerCase());
     }).toList();
+  }
+
+  // Validate lahan data before submit
+  Map<String, String?> validateLahanData({
+    required String namaLahan,
+    required double luasLahan,
+    required String satuanLuas,
+    required String koordinat,
+    required double centroidLat,
+    required double centroidLng,
+  }) {
+    final errors = <String, String?>{};
+
+    if (namaLahan.trim().isEmpty) {
+      errors['nama_lahan'] = 'Nama lahan tidak boleh kosong';
+    } else if (namaLahan.length > 100) {
+      errors['nama_lahan'] = 'Nama lahan tidak boleh lebih dari 100 karakter';
+    }
+
+    if (luasLahan <= 0) {
+      errors['luas_lahan'] = 'Luas lahan harus lebih besar dari 0';
+    }
+
+    if (satuanLuas.trim().isEmpty) {
+      errors['satuan_luas'] = 'Satuan luas tidak boleh kosong';
+    }
+
+    if (koordinat.trim().isEmpty) {
+      errors['koordinat'] = 'Koordinat tidak boleh kosong';
+    }
+
+    // Validasi koordinat latitude (-90 to 90)
+    if (centroidLat < -90 || centroidLat > 90) {
+      errors['centroid_lat'] = 'Latitude harus antara -90 hingga 90';
+    }
+
+    // Validasi koordinat longitude (-180 to 180)
+    if (centroidLng < -180 || centroidLng > 180) {
+      errors['centroid_lng'] = 'Longitude harus antara -180 hingga 180';
+    }
+
+    return errors;
+  }
+
+  // Validate authentication before performing operations
+  Future<Map<String, String?>> validateAuthAccess() async {
+    final errors = <String, String?>{};
+
+    final isAuth = await isAuthenticated();
+    if (!isAuth) {
+      errors['authentication'] = 'Anda harus login terlebih dahulu';
+      return errors;
+    }
+
+    return errors;
   }
 }

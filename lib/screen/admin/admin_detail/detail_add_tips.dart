@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:projek_uas/providers/tips_provider.dart';
+import 'package:projek_uas/providers/auth_provider.dart';
 
 class DetailAddTipsPage extends StatefulWidget {
   final bool isEdit;
@@ -31,6 +32,8 @@ class _DetailAddTipsPageState extends State<DetailAddTipsPage> {
   String? _existingImageUrl;
   bool _isLoading = false;
   bool _isUploadingImage = false;
+  bool _hasAdminAccess = false;
+  bool _isCheckingAccess = true;
   final ImagePicker _picker = ImagePicker();
 
   // Cloudinary configuration
@@ -42,6 +45,61 @@ class _DetailAddTipsPageState extends State<DetailAddTipsPage> {
     super.initState();
     if (widget.isEdit && widget.tipData != null) {
       _initializeEditData();
+    }
+    _initializeProviders();
+  }
+
+  void _initializeProviders() async {
+    // Set up the TipsProvider with AuthProvider reference
+    final tipsProvider = Provider.of<TipsProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    tipsProvider.setAuthProvider(authProvider);
+    
+    // Check admin access once during initialization
+    await _checkAndSetAdminAccess();
+  }
+
+  Future<void> _checkAndSetAdminAccess() async {
+    try {
+      setState(() {
+        _isCheckingAccess = true;
+      });
+
+      final tipsProvider = Provider.of<TipsProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      // Ensure user is authenticated first
+      if (!authProvider.isAuthenticated) {
+        print('❌ User not authenticated');
+        setState(() {
+          _hasAdminAccess = false;
+          _isCheckingAccess = false;
+        });
+        _showAccessDeniedDialog('Anda harus login terlebih dahulu');
+        return;
+      }
+
+      // Check admin access
+      final hasAccess = await tipsProvider.isUserAdmin();
+      print('✅ Admin access check result: $hasAccess');
+      
+      setState(() {
+        _hasAdminAccess = hasAccess;
+        _isCheckingAccess = false;
+      });
+
+      // Show dialog if no access
+      if (!hasAccess) {
+        _showAccessDeniedDialog('Hanya admin yang dapat menambah atau mengedit tips.');
+      }
+
+    } catch (e) {
+      print('❌ Error checking admin access: $e');
+      setState(() {
+        _hasAdminAccess = false;
+        _isCheckingAccess = false;
+      });
+      _showAccessDeniedDialog('Terjadi kesalahan saat memeriksa akses admin.');
     }
   }
 
@@ -57,6 +115,27 @@ class _DetailAddTipsPageState extends State<DetailAddTipsPage> {
     _judulController.dispose();
     _deskripsiController.dispose();
     super.dispose();
+  }
+
+  /// Show access denied dialog
+  void _showAccessDeniedDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Akses Ditolak'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pop(); // Exit the page
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Upload image to Cloudinary
@@ -194,7 +273,7 @@ class _DetailAddTipsPageState extends State<DetailAddTipsPage> {
 
   Widget _buildImageSection() {
     return GestureDetector(
-      onTap: _isUploadingImage ? null : _showImageSourceDialog,
+      onTap: (_isUploadingImage || !_hasAdminAccess) ? null : _showImageSourceDialog,
       child: Container(
         height: 180,
         decoration: BoxDecoration(
@@ -270,7 +349,7 @@ class _DetailAddTipsPageState extends State<DetailAddTipsPage> {
                       ),
                     ),
                   // Remove button
-                  if (!_isUploadingImage)
+                  if (!_isUploadingImage && _hasAdminAccess)
                     Positioned(
                       top: 8,
                       right: 8,
@@ -287,7 +366,7 @@ class _DetailAddTipsPageState extends State<DetailAddTipsPage> {
                       ),
                     ),
                   // Edit button
-                  if (!_isUploadingImage)
+                  if (!_isUploadingImage && _hasAdminAccess)
                     Positioned(
                       bottom: 8,
                       right: 8,
@@ -312,23 +391,32 @@ class _DetailAddTipsPageState extends State<DetailAddTipsPage> {
                     Icon(
                       Icons.add_a_photo, 
                       size: 40, 
-                      color: _isUploadingImage ? Colors.grey : Colors.black54,
+                      color: (_isUploadingImage || !_hasAdminAccess) ? Colors.grey : Colors.black54,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _isUploadingImage ? 'Mengunggah...' : 'Tambah Foto',
+                      _isUploadingImage 
+                          ? 'Mengunggah...' 
+                          : !_hasAdminAccess 
+                              ? 'Akses Terbatas'
+                              : 'Tambah Foto',
                       style: TextStyle(
                         fontSize: 16,
-                        color: _isUploadingImage ? Colors.grey : Colors.black54,
+                        color: (_isUploadingImage || !_hasAdminAccess) ? Colors.grey : Colors.black54,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _isUploadingImage ? 'Mohon tunggu' : 'Ketuk untuk menambah gambar',
+                      _isUploadingImage 
+                          ? 'Mohon tunggu' 
+                          : !_hasAdminAccess 
+                              ? 'Hanya admin yang dapat menambah gambar'
+                              : 'Ketuk untuk menambah gambar',
                       style: TextStyle(
                         fontSize: 12,
-                        color: _isUploadingImage ? Colors.grey : Colors.black38,
+                        color: (_isUploadingImage || !_hasAdminAccess) ? Colors.grey : Colors.black38,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
@@ -358,6 +446,12 @@ class _DetailAddTipsPageState extends State<DetailAddTipsPage> {
   }
 
   Future<void> _submitForm() async {
+    // Check admin access first
+    if (!_hasAdminAccess) {
+      _showSnackBar('Akses ditolak. Hanya admin yang dapat melakukan operasi ini.', isError: true);
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -374,16 +468,46 @@ class _DetailAddTipsPageState extends State<DetailAddTipsPage> {
 
     try {
       final tipsProvider = Provider.of<TipsProvider>(context, listen: false);
-      
-      // TODO: Get actual token from your auth provider
-      const String token = 'your_auth_token_here';
-      
-      // TODO: Get actual user ID from your auth provider
-      const int userId = 1;
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      // Double-check authentication
+      if (!authProvider.isAuthenticated) {
+        _showSnackBar('Anda harus login terlebih dahulu', isError: true);
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Double-check admin access
+      final hasAdminAccess = await tipsProvider.isUserAdmin();
+      if (!hasAdminAccess) {
+        _showSnackBar('Akses ditolak. Hanya admin yang dapat melakukan operasi ini.', isError: true);
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
 
       final String judul = _judulController.text.trim();
       final String deskripsi = _deskripsiController.text.trim();
       final DateTime tanggalTips = DateTime.now();
+
+      // Validate tip data using TipsProvider
+      final validationErrors = tipsProvider.validateTipData(
+        judul: judul,
+        deskripsi: deskripsi,
+        tanggalTips: tanggalTips,
+      );
+
+      if (validationErrors.isNotEmpty) {
+        final errorMessage = validationErrors.values.where((e) => e != null).join('\n');
+        _showSnackBar(errorMessage, isError: true);
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
 
       // Handle image upload to Cloudinary
       String? imageUrl;
@@ -402,12 +526,18 @@ class _DetailAddTipsPageState extends State<DetailAddTipsPage> {
         imageUrl = _existingImageUrl;
       }
 
+      print('=== SUBMIT FORM DEBUG ===');
+      print('Is Edit: ${widget.isEdit}');
+      print('Has Admin Access: $_hasAdminAccess');
+      print('Auth Token: ${authProvider.token != null ? "Present" : "Missing"}');
+      print('User Role: ${authProvider.userRole}');
+      print('Is Admin: ${authProvider.isAdmin}');
+
       bool success;
       if (widget.isEdit && widget.tipData != null) {
         // Update existing tip
         final int tipId = widget.tipData!['id_tips'] ?? 0;
         success = await tipsProvider.updateTip(
-          token: token,
           idTips: tipId,
           judul: judul,
           deskripsi: deskripsi,
@@ -417,12 +547,10 @@ class _DetailAddTipsPageState extends State<DetailAddTipsPage> {
       } else {
         // Add new tip
         success = await tipsProvider.addTip(
-          token: token,
           judul: judul,
           deskripsi: deskripsi,
           gambar: imageUrl,
           tanggalTips: tanggalTips,
-          idUsers: userId,
         );
       }
 
@@ -446,6 +574,7 @@ class _DetailAddTipsPageState extends State<DetailAddTipsPage> {
         );
       }
     } catch (e) {
+      print('❌ Submit form error: $e');
       _showSnackBar('Terjadi kesalahan: $e', isError: true);
     } finally {
       if (mounted) {
@@ -528,64 +657,106 @@ class _DetailAddTipsPageState extends State<DetailAddTipsPage> {
             ),
           ),
         ),
-        body: Form(
-          key: _formKey,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ListView(
-              children: [
-                // Image Section
-                _buildImageSection(),
-                const SizedBox(height: 24),
+        body: Consumer2<TipsProvider, AuthProvider>(
+          builder: (context, tipsProvider, authProvider, child) {
+            // Show loading if checking access or authentication
+            if (_isCheckingAccess || !authProvider.isAuthenticated) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Memeriksa akses...'),
+                  ],
+                ),
+              );
+            }
 
-                // Input Judul Tips
-                const Text(
-                  'Judul Tips',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _judulController,
-                  validator: _validateJudul,
-                  maxLength: 84,
-                  enabled: !_isUploadingImage, // Disable during upload
-                  decoration: InputDecoration(
-                    hintText: 'Masukkan judul tips',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    errorMaxLines: 2,
-                  ),
-                ),
-                const SizedBox(height: 16),
+            return Form(
+              key: _formKey,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ListView(
+                  children: [
+                    // Admin access info
+                    if (!_hasAdminAccess)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.shade300),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.block, color: Colors.red),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Akses ditolak. Hanya admin yang dapat menambah atau mengedit tips.',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
-                // Input Deskripsi Tips
-                const Text(
-                  'Deskripsi Tips',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _deskripsiController,
-                  validator: _validateDeskripsi,
-                  maxLines: 8,
-                  enabled: !_isUploadingImage, // Disable during upload
-                  decoration: InputDecoration(
-                    hintText: 'Masukkan deskripsi tips (minimal 50 karakter)',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                    // Image Section
+                    _buildImageSection(),
+                    const SizedBox(height: 24),
+
+                    // Input Judul Tips
+                    const Text(
+                      'Judul Tips',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                     ),
-                    errorMaxLines: 2,
-                    helperText: '${_deskripsiController.text.length} karakter',
-                  ),
-                  onChanged: (value) {
-                    setState(() {}); // Rebuild to update character count
-                  },
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _judulController,
+                      validator: _validateJudul,
+                      maxLength: 84,
+                      enabled: !_isUploadingImage && _hasAdminAccess,
+                      decoration: InputDecoration(
+                        hintText: 'Masukkan judul tips',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        errorMaxLines: 2,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Input Deskripsi Tips
+                    const Text(
+                      'Deskripsi Tips',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _deskripsiController,
+                      validator: _validateDeskripsi,
+                      maxLines: 8,
+                      enabled: !_isUploadingImage && _hasAdminAccess,
+                      decoration: InputDecoration(
+                        hintText: 'Masukkan deskripsi tips (minimal 50 karakter)',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        errorMaxLines: 2,
+                        helperText: '${_deskripsiController.text.length} karakter',
+                      ),
+                      onChanged: (value) {
+                        setState(() {}); // Rebuild to update character count
+                      },
+                    ),
+                    const SizedBox(height: 100), // Space for bottom button
+                  ],
                 ),
-                const SizedBox(height: 100), // Space for bottom button
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
         bottomNavigationBar: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -594,13 +765,15 @@ class _DetailAddTipsPageState extends State<DetailAddTipsPage> {
             height: 50,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: _hasAdminAccess ? Colors.green : Colors.grey,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 disabledBackgroundColor: Colors.grey,
               ),
-              onPressed: (_isLoading || _isUploadingImage) ? null : _submitForm,
+              onPressed: (_isLoading || _isUploadingImage || !_hasAdminAccess) 
+                  ? null 
+                  : _submitForm,
               child: (_isLoading || _isUploadingImage)
                   ? Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -625,7 +798,9 @@ class _DetailAddTipsPageState extends State<DetailAddTipsPage> {
                       ],
                     )
                   : Text(
-                      widget.isEdit ? 'Perbarui' : 'Publikasi',
+                      !_hasAdminAccess 
+                          ? 'Akses Terbatas' 
+                          : (widget.isEdit ? 'Perbarui' : 'Publikasi'),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

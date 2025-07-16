@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:projek_uas/screen/admin/admin_detail/detail_add_tips.dart';
 import 'package:projek_uas/providers/tips_provider.dart';
+import 'package:projek_uas/providers/auth_provider.dart';
 
 class AddTipsPage extends StatefulWidget {
   const AddTipsPage({super.key});
@@ -11,208 +12,405 @@ class AddTipsPage extends StatefulWidget {
 }
 
 class _AddTipsPageState extends State<AddTipsPage> {
+  bool _isInitialized = false;
+
   @override
   void initState() {
     super.initState();
-    // Fetch tips data when page loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    _initializePage();
+  }
+
+  Future<void> _initializePage() async {
+    try {
+      // Set up the TipsProvider with AuthProvider reference
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final tipsProvider = Provider.of<TipsProvider>(context, listen: false);
-      tipsProvider.fetchAllTips();
+      
+      // Connect TipsProvider to AuthProvider
+      tipsProvider.setAuthProvider(authProvider);
+      
+      // Check authentication and admin access
+      if (!authProvider.isAuthenticated) {
+        _handleNotAuthenticated();
+        return;
+      }
+
+      if (!authProvider.isAdmin) {
+        _handleNotAuthorized();
+        return;
+      }
+
+      // Fetch tips data when page loads
+      await tipsProvider.fetchAllTips();
+      
+      setState(() {
+        _isInitialized = true;
+      });
+    } catch (e) {
+      _handleInitializationError(e.toString());
+    }
+  }
+
+  void _handleNotAuthenticated() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Anda harus login terlebih dahulu'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.of(context).pushReplacementNamed('/login');
+    });
+  }
+
+  void _handleNotAuthorized() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Akses ditolak. Hanya admin yang dapat mengakses halaman ini.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.of(context).pop();
+    });
+  }
+
+  void _handleInitializationError(String error) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error inisialisasi: $error'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    return Consumer2<AuthProvider, TipsProvider>(
+      builder: (context, authProvider, tipsProvider, child) {
+        // Show loading screen while initializing
+        if (!_isInitialized) {
+          return Scaffold(
+            appBar: AppBar(
+              automaticallyImplyLeading: false,
+              backgroundColor: const Color.fromRGBO(247, 247, 247, 1),
+              elevation: 0,
+              title: const Text(
+                'Memuat...',
+                style: TextStyle(color: Colors.black),
+              ),
+            ),
+            body: const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+              ),
+            ),
+          );
+        }
+
+        // Check authentication status
+        if (!authProvider.isAuthenticated) {
+          return _buildErrorScreen(
+            icon: Icons.login,
+            title: 'Tidak Terautentikasi',
+            message: 'Silakan login kembali untuk mengakses halaman ini',
+            buttonText: 'Login',
+            onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
+          );
+        }
+
+        // Check admin status
+        if (!authProvider.isAdmin) {
+          return _buildErrorScreen(
+            icon: Icons.security,
+            title: 'Akses Ditolak',
+            message: 'Hanya admin yang dapat mengakses halaman ini',
+            buttonText: 'Kembali',
+            onPressed: () => Navigator.of(context).pop(),
+          );
+        }
+
+        return Scaffold(
+          appBar: AppBar(
+            automaticallyImplyLeading: false,
+            backgroundColor: const Color.fromRGBO(247, 247, 247, 1),
+            elevation: 0,
+            title: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Image.asset(
+                  'assets/logo.png',
+                  height: 32,
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Pocketfarm',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF999999),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'Admin',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.normal,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh, color: Colors.black),
+                onPressed: () {
+                  tipsProvider.refresh();
+                },
+              ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: Colors.black),
+                onSelected: (value) {
+                  if (value == 'logout') {
+                    _showLogoutConfirmation(authProvider);
+                  } else if (value == 'debug') {
+                    tipsProvider.debugAuthState();
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'logout',
+                    child: Row(
+                      children: [
+                        Icon(Icons.logout, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Logout'),
+                      ],
+                    ),
+                  ),
+                  // Debug option (remove in production)
+                ],
+              ),
+            ],
+          ),
+          body: _buildBody(tipsProvider),
+          floatingActionButton: FloatingActionButton(
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DetailAddTipsPage(),
+                ),
+              );
+              
+              // Refresh data if tip was added successfully
+              if (result == true) {
+                tipsProvider.refresh();
+              }
+            },
+            shape: const CircleBorder(),
+            child: const Icon(Icons.add),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildErrorScreen({
+    required IconData icon,
+    required String title,
+    required String message,
+    required String buttonText,
+    required VoidCallback onPressed,
+  }) {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: const Color.fromRGBO(247, 247, 247, 1),
         elevation: 0,
-        title: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        title: const Text(
+          'Error',
+          style: TextStyle(color: Colors.black),
+        ),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(
-              'assets/logo.png',
-              height: 32,
+            Icon(
+              icon,
+              size: 64,
+              color: Colors.red[400],
             ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Pocketfarm',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.red[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
                 ),
-                const SizedBox(height: 2),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF999999),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    'Admin',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.normal,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: onPressed,
+              icon: Icon(icon),
+              label: Text(buttonText),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.black),
-            onPressed: () {
-              final tipsProvider = Provider.of<TipsProvider>(context, listen: false);
-              tipsProvider.refresh();
-            },
-          ),
-        ],
       ),
-      body: Consumer<TipsProvider>(
-        builder: (context, tipsProvider, child) {
-          if (tipsProvider.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-              ),
-            );
-          }
+    );
+  }
 
-          if (tipsProvider.error != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Terjadi Kesalahan',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red[600],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Text(
-                      tipsProvider.error!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.red[400],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      tipsProvider.clearError();
-                      tipsProvider.refresh();
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Coba Lagi'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
+  Widget _buildBody(TipsProvider tipsProvider) {
+    if (tipsProvider.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+        ),
+      );
+    }
 
-          if (tipsProvider.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.article_outlined,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Belum Ada Tips',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tambahkan tips pertama dengan menekan tombol +',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-                ],
+    if (tipsProvider.error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Terjadi Kesalahan',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.red[600],
               ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => tipsProvider.refresh(),
-            color: Colors.green,
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: tipsProvider.tips.length,
-              itemBuilder: (context, index) {
-                final tip = tipsProvider.tips[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: _buildTipsCard(
-                    context: context,
-                    tip: tip,
-                    tipsProvider: tipsProvider,
-                  ),
-                );
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                tipsProvider.error!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.red[400],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                tipsProvider.clearError();
+                tipsProvider.refresh();
               },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Coba Lagi'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (tipsProvider.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.article_outlined,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Belum Ada Tips',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tambahkan tips pertama dengan menekan tombol +',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => tipsProvider.refresh(),
+      color: Colors.green,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: tipsProvider.tips.length,
+        itemBuilder: (context, index) {
+          final tip = tipsProvider.tips[index];
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _buildTipsCard(
+              context: context,
+              tip: tip,
+              tipsProvider: tipsProvider,
             ),
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const DetailAddTipsPage(),
-            ),
-          );
-          
-          // Refresh data if tip was added successfully
-          if (result == true) {
-            final tipsProvider = Provider.of<TipsProvider>(context, listen: false);
-            tipsProvider.refresh();
-          }
-        },
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -483,6 +681,75 @@ class _AddTipsPageState extends State<AddTipsPage> {
     );
   }
 
+  void _showLogoutConfirmation(AuthProvider authProvider) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Konfirmasi Logout'),
+          content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _logout(authProvider);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _logout(AuthProvider authProvider) async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+          ),
+        ),
+      );
+
+      // Logout using AuthProvider
+      await authProvider.logout();
+
+      // Close loading dialog
+      if (context.mounted) Navigator.of(context).pop();
+
+      // Navigate to login page
+      if (context.mounted) {
+        Navigator.of(context).pushReplacementNamed('/login');
+      }
+    } catch (e) {
+      // Close loading dialog
+      if (context.mounted) Navigator.of(context).pop();
+      
+      // Show error message
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saat logout: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _deleteTip(
     BuildContext context,
     int tipId,
@@ -500,49 +767,49 @@ class _AddTipsPageState extends State<AddTipsPage> {
     );
 
     try {
-      // You'll need to get the token from your auth provider or shared preferences
-      // For now, using a placeholder - replace with actual token retrieval
-      const String token = 'your_auth_token_here'; // TODO: Get actual token
-      
-      final success = await tipsProvider.deleteTip(
-        token: token,
-        idTips: tipId,
-      );
+      // Use TipsProvider's deleteTip method (no need to pass token manually)
+      final success = await tipsProvider.deleteTip(idTips: tipId);
 
       // Close loading dialog
       if (context.mounted) Navigator.of(context).pop();
 
       if (success) {
         // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tips berhasil dihapus'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tips berhasil dihapus'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       } else {
         // Show error message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(tipsProvider.error ?? 'Gagal menghapus tips'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(tipsProvider.error ?? 'Gagal menghapus tips'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     } catch (e) {
       // Close loading dialog
       if (context.mounted) Navigator.of(context).pop();
       
       // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Terjadi kesalahan: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Terjadi kesalahan: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 }

@@ -36,7 +36,7 @@ class DetailLahanLogic {
       context,
       listen: false,
     );
-    await laporanProvider.fetchLaporan(idLahan);
+    await laporanProvider.fetchLaporan(idLahan, token!);
   }
 
   // ===== LAPORAN OPERATIONS =====
@@ -47,7 +47,7 @@ class DetailLahanLogic {
     );
     // Clear cache dulu untuk memastikan data terbaru
     laporanProvider.clearLaporanCache(idLahan);
-    await laporanProvider.fetchLaporan(idLahan);
+    await laporanProvider.fetchLaporan(idLahan, token!);
   }
 
   Future<void> createLaporan() async {

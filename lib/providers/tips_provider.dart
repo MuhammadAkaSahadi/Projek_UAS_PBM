@@ -2,6 +2,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:projek_uas/providers/auth_provider.dart';
+import 'package:projek_uas/helper/auth_helper.dart';
 
 class TipsProvider with ChangeNotifier {
   final List<Map<String, dynamic>> _tips = [];
@@ -9,7 +11,15 @@ class TipsProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   
-  static const String baseUrl = 'http://192.168.1.2:5042/api/Tips';
+  static const String baseUrl = 'http://192.168.43.143:5042/api/Tips';
+
+  // Getter untuk mengakses AuthProvider
+  AuthProvider? _authProvider;
+  
+  // Method untuk set AuthProvider reference
+  void setAuthProvider(AuthProvider authProvider) {
+    _authProvider = authProvider;
+  }
 
   // Getters
   bool get isLoading => _isLoading;
@@ -17,7 +27,79 @@ class TipsProvider with ChangeNotifier {
   List<Map<String, dynamic>> get tips => _tips;
   List<Map<String, dynamic>> get searchResults => _searchResults;
 
-  // Fetch all tips
+  // Helper method untuk validasi admin menggunakan AuthProvider
+  Future<bool> _validateAdminAccess() async {
+    try {
+      // Prioritas 1: Gunakan AuthProvider jika tersedia
+      if (_authProvider != null) {
+        final isAuthenticated = _authProvider!.isAuthenticated;
+        final isAdmin = _authProvider!.isAdmin;
+        
+        print('Admin validation via AuthProvider - Auth: $isAuthenticated, Admin: $isAdmin');
+        return isAuthenticated && isAdmin;
+      }
+      
+      // Prioritas 2: Gunakan AuthHelper sebagai fallback
+      final hasValidToken = await AuthHelper.isAuthenticated();
+      final isAdmin = await AuthHelper.isAdmin();
+      
+      print('Admin validation via AuthHelper - Auth: $hasValidToken, Admin: $isAdmin');
+      return hasValidToken && isAdmin;
+    } catch (e) {
+      print('Error validating admin access: $e');
+      return false;
+    }
+  }
+
+  // Helper method untuk mendapatkan token dengan konsisten
+  Future<String?> _getAuthToken() async {
+    try {
+      // Prioritas 1: Gunakan AuthProvider jika tersedia
+      if (_authProvider != null) {
+        return _authProvider!.token;
+      }
+      
+      // Prioritas 2: Gunakan AuthHelper sebagai fallback
+      return await AuthHelper.getToken();
+    } catch (e) {
+      print('Error getting auth token: $e');
+      return null;
+    }
+  }
+
+  // Helper method untuk mendapatkan user ID
+  Future<int?> _getCurrentUserId() async {
+    try {
+      // Prioritas 1: Gunakan AuthProvider jika tersedia
+      if (_authProvider != null) {
+        return _authProvider!.userId;
+      }
+      
+      // Prioritas 2: Gunakan AuthHelper sebagai fallback
+      return await AuthHelper.getCurrentUserId();
+    } catch (e) {
+      print('Error getting current user ID: $e');
+      return null;
+    }
+  }
+
+  // Helper method untuk mendapatkan auth headers
+  Future<Map<String, String>> _getAuthHeaders() async {
+    final token = await _getAuthToken();
+    
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    
+    return headers;
+  }
+
+  // Fetch all tips (tetap public, tidak perlu admin)
   Future<void> fetchAllTips() async {
     _isLoading = true;
     _error = null;
@@ -62,15 +144,36 @@ class TipsProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Add new tip
+  // Add new tip - HANYA ADMIN (menggunakan AuthProvider)
   Future<bool> addTip({
-    required String token,
     required String judul,
     required String deskripsi,
     String? gambar,
     required DateTime tanggalTips,
-    required int idUsers,
+    int? customUserId, // Optional, jika tidak diisi akan menggunakan current user
   }) async {
+    print('=== ADD TIP ADMIN CHECK ===');
+    
+    // Validasi admin access
+    final hasAdminAccess = await _validateAdminAccess();
+    if (!hasAdminAccess) {
+      _error = 'Akses ditolak. Hanya admin yang dapat menambahkan tips.';
+      print('❌ Admin access denied');
+      notifyListeners();
+      return false;
+    }
+
+    print('✅ Admin access granted');
+
+    // Dapatkan user ID
+    final userId = customUserId ?? await _getCurrentUserId();
+    if (userId == null) {
+      _error = 'Gagal mendapatkan informasi user';
+      print('❌ Failed to get user ID');
+      notifyListeners();
+      return false;
+    }
+
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -81,24 +184,22 @@ class TipsProvider with ChangeNotifier {
       print('Deskripsi: $deskripsi');
       print('Gambar: $gambar');
       print('Tanggal: $tanggalTips');
-      print('ID Users: $idUsers');
+      print('ID Users: $userId');
 
       final requestBody = {
         'Judul': judul,
         'Deskripsi': deskripsi,
         'Gambar': gambar ?? '',
         'Tanggal_Tips': tanggalTips.toIso8601String(),
-        'Id_Users': idUsers,
+        'Id_Users': userId,
       };
 
       print('Request Body: ${jsonEncode(requestBody)}');
 
+      final headers = await _getAuthHeaders();
       final response = await http.post(
         Uri.parse(baseUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
+        headers: headers,
         body: jsonEncode(requestBody),
       );
 
@@ -119,6 +220,10 @@ class TipsProvider with ChangeNotifier {
         } else {
           throw Exception(result['message'] ?? 'Gagal menambahkan tip');
         }
+      } else if (response.statusCode == 401) {
+        throw Exception('Token tidak valid atau sudah kadaluarsa');
+      } else if (response.statusCode == 403) {
+        throw Exception('Akses ditolak. Hanya admin yang dapat menambahkan tips.');
       } else {
         final errorData = jsonDecode(response.body);
         throw Exception(errorData['message'] ?? 'Gagal menambahkan tip');
@@ -133,15 +238,27 @@ class TipsProvider with ChangeNotifier {
     }
   }
 
-  // Update existing tip
+  // Update existing tip - HANYA ADMIN (menggunakan AuthProvider)
   Future<bool> updateTip({
-    required String token,
     required int idTips,
     required String judul,
     required String deskripsi,
     String? gambar,
     required DateTime tanggalTips,
   }) async {
+    print('=== UPDATE TIP ADMIN CHECK ===');
+    
+    // Validasi admin access
+    final hasAdminAccess = await _validateAdminAccess();
+    if (!hasAdminAccess) {
+      _error = 'Akses ditolak. Hanya admin yang dapat mengupdate tips.';
+      print('❌ Admin access denied');
+      notifyListeners();
+      return false;
+    }
+
+    print('✅ Admin access granted');
+
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -163,12 +280,10 @@ class TipsProvider with ChangeNotifier {
 
       print('Update Request Body: ${jsonEncode(requestBody)}');
 
+      final headers = await _getAuthHeaders();
       final response = await http.put(
         Uri.parse('$baseUrl/$idTips'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
+        headers: headers,
         body: jsonEncode(requestBody),
       );
 
@@ -189,6 +304,10 @@ class TipsProvider with ChangeNotifier {
         } else {
           throw Exception(result['message'] ?? 'Gagal mengupdate tip');
         }
+      } else if (response.statusCode == 401) {
+        throw Exception('Token tidak valid atau sudah kadaluarsa');
+      } else if (response.statusCode == 403) {
+        throw Exception('Akses ditolak. Hanya admin yang dapat mengupdate tips.');
       } else if (response.statusCode == 404) {
         throw Exception('Tip tidak ditemukan');
       } else {
@@ -205,11 +324,23 @@ class TipsProvider with ChangeNotifier {
     }
   }
 
-  // Delete tip
+  // Delete tip - HANYA ADMIN (menggunakan AuthProvider)
   Future<bool> deleteTip({
-    required String token,
     required int idTips,
   }) async {
+    print('=== DELETE TIP ADMIN CHECK ===');
+    
+    // Validasi admin access
+    final hasAdminAccess = await _validateAdminAccess();
+    if (!hasAdminAccess) {
+      _error = 'Akses ditolak. Hanya admin yang dapat menghapus tips.';
+      print('❌ Admin access denied');
+      notifyListeners();
+      return false;
+    }
+
+    print('✅ Admin access granted');
+
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -218,12 +349,10 @@ class TipsProvider with ChangeNotifier {
       print('=== DELETE TIP DEBUG ===');
       print('ID Tips: $idTips');
 
+      final headers = await _getAuthHeaders();
       final response = await http.delete(
         Uri.parse('$baseUrl/$idTips'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
+        headers: headers,
       );
 
       print('Delete Response status: ${response.statusCode}');
@@ -243,6 +372,10 @@ class TipsProvider with ChangeNotifier {
         } else {
           throw Exception(result['message'] ?? 'Gagal menghapus tip');
         }
+      } else if (response.statusCode == 401) {
+        throw Exception('Token tidak valid atau sudah kadaluarsa');
+      } else if (response.statusCode == 403) {
+        throw Exception('Akses ditolak. Hanya admin yang dapat menghapus tips.');
       } else if (response.statusCode == 404) {
         throw Exception('Tip tidak ditemukan');
       } else {
@@ -259,7 +392,7 @@ class TipsProvider with ChangeNotifier {
     }
   }
 
-  // Search tips
+  // Search tips (tetap public, tidak perlu admin)
   Future<void> searchTips(String keyword) async {
     if (keyword.trim().isEmpty) {
       _searchResults.clear();
@@ -309,6 +442,43 @@ class TipsProvider with ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
+  }
+
+  // Method untuk cek apakah user adalah admin (improved)
+  Future<bool> isUserAdmin() async {
+    return await _validateAdminAccess();
+  }
+
+  // Method untuk mendapatkan role user (improved)
+  Future<String?> getUserRole() async {
+    try {
+      // Prioritas 1: Gunakan AuthProvider jika tersedia
+      if (_authProvider != null) {
+        return _authProvider!.userRole;
+      }
+      
+      // Prioritas 2: Gunakan AuthHelper sebagai fallback
+      return await AuthHelper.getCurrentUserRole();
+    } catch (e) {
+      print('Error getting user role: $e');
+      return null;
+    }
+  }
+
+  // Check if user is authenticated
+  Future<bool> isAuthenticated() async {
+    try {
+      // Prioritas 1: Gunakan AuthProvider jika tersedia
+      if (_authProvider != null) {
+        return _authProvider!.isAuthenticated;
+      }
+      
+      // Prioritas 2: Gunakan AuthHelper sebagai fallback
+      return await AuthHelper.isAuthenticated();
+    } catch (e) {
+      print('Error checking authentication: $e');
+      return false;
+    }
   }
 
   // Get tip by ID (helper method)
@@ -376,12 +546,29 @@ class TipsProvider with ChangeNotifier {
     print('Search results: ${_searchResults.length}');
   }
 
+  // Debug method untuk melihat auth state
+  Future<void> debugAuthState() async {
+    print('=== TIPS PROVIDER AUTH DEBUG ===');
+    print('AuthProvider available: ${_authProvider != null}');
+    if (_authProvider != null) {
+      print('AuthProvider - Authenticated: ${_authProvider!.isAuthenticated}');
+      print('AuthProvider - Is Admin: ${_authProvider!.isAdmin}');
+      print('AuthProvider - User Role: ${_authProvider!.userRole}');
+      print('AuthProvider - User ID: ${_authProvider!.userId}');
+    }
+    
+    print('AuthHelper - Authenticated: ${await AuthHelper.isAuthenticated()}');
+    print('AuthHelper - Is Admin: ${await AuthHelper.isAdmin()}');
+    print('AuthHelper - User Role: ${await AuthHelper.getCurrentUserRole()}');
+    print('AuthHelper - User ID: ${await AuthHelper.getCurrentUserId()}');
+    print('================================');
+  }
+
   // Validate tip data before submit
   Map<String, String?> validateTipData({
     required String judul,
     required String deskripsi,
     required DateTime tanggalTips,
-    required int idUsers,
   }) {
     final errors = <String, String?>{};
 
@@ -395,12 +582,27 @@ class TipsProvider with ChangeNotifier {
       errors['deskripsi'] = 'Deskripsi tips tidak boleh kosong';
     }
 
-    if (idUsers <= 0) {
-      errors['id_users'] = 'ID User harus berupa angka positif';
-    }
-
     if (tanggalTips.isAfter(DateTime.now().add(const Duration(days: 365)))) {
       errors['tanggal_tips'] = 'Tanggal tips tidak valid';
+    }
+
+    return errors;
+  }
+
+  // Validate admin access before performing admin operations (improved)
+  Future<Map<String, String?>> validateAdminAccess() async {
+    final errors = <String, String?>{};
+
+    final isAuth = await isAuthenticated();
+    if (!isAuth) {
+      errors['authentication'] = 'Anda harus login terlebih dahulu';
+      return errors;
+    }
+
+    final hasAdminAccess = await _validateAdminAccess();
+    if (!hasAdminAccess) {
+      errors['authorization'] = 'Akses ditolak. Hanya admin yang dapat melakukan operasi ini.';
+      return errors;
     }
 
     return errors;

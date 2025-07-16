@@ -41,7 +41,7 @@ class _DetailLaporanState extends State<DetailLaporan> {
       },
     );
     _logic.initialize(context);
-    _logic.initializeData(context, widget.idLahan, widget.isEdit);
+    _logic.initializeData(context, widget.idLahan, widget.isEdit,);
   }
 
   @override

@@ -1,6 +1,7 @@
 // screen/admin/tips_management.dart
 import 'package:flutter/material.dart';
 import 'package:projek_uas/providers/tips_provider.dart';
+import 'package:projek_uas/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 
 class TipsManagementPage extends StatefulWidget {
@@ -13,6 +14,50 @@ class TipsManagementPage extends StatefulWidget {
 class _TipsManagementPageState extends State<TipsManagementPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearchMode = false;
+  bool _hasAdminAccess = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializePage();
+  }
+
+  Future<void> _initializePage() async {
+    // Setup TipsProvider dengan AuthProvider reference
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final tipsProvider = Provider.of<TipsProvider>(context, listen: false);
+    
+    // Set AuthProvider reference di TipsProvider
+    tipsProvider.setAuthProvider(authProvider);
+    
+    // Validasi admin access
+    await _checkAdminAccess();
+    
+    // Load data
+    await tipsProvider.fetchAllTips();
+  }
+
+  Future<void> _checkAdminAccess() async {
+    final tipsProvider = Provider.of<TipsProvider>(context, listen: false);
+    final hasAccess = await tipsProvider.isUserAdmin();
+    
+    setState(() {
+      _hasAdminAccess = hasAccess;
+    });
+
+    // Jika bukan admin, tampilkan peringatan dan kembali
+    if (!hasAccess && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Akses ditolak. Halaman ini hanya untuk admin.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      
+      // Optional: Navigate back atau ke halaman lain
+      // Navigator.pop(context);
+    }
+  }
 
   @override
   void dispose() {
@@ -52,10 +97,42 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
               color: Colors.white,
             ),
           ),
+          // Admin indicator
+          if (_hasAdminAccess)
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              child: const Icon(
+                Icons.admin_panel_settings,
+                color: Colors.white,
+              ),
+            ),
         ],
       ),
       body: Column(
         children: [
+          // Admin Access Warning
+          if (!_hasAdminAccess)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              color: Colors.red[100],
+              child: Row(
+                children: [
+                  Icon(Icons.warning, color: Colors.red[700]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Anda tidak memiliki akses admin. Beberapa fitur mungkin tidak tersedia.',
+                      style: TextStyle(
+                        color: Colors.red[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Search Bar
           if (_isSearchMode)
             Container(
@@ -96,6 +173,57 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
                   return const Center(
                     child: CircularProgressIndicator(
                       color: Color(0xFF4CAF50),
+                    ),
+                  );
+                }
+
+                // Show error if exists
+                if (tipsProvider.error != null) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.red[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Terjadi Kesalahan',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.red[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Text(
+                            tipsProvider.error!,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.red[500],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            tipsProvider.clearError();
+                            tipsProvider.refresh();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4CAF50),
+                          ),
+                          child: const Text(
+                            'Coba Lagi',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 }
@@ -153,6 +281,14 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
           ),
         ],
       ),
+      // Floating Action Button untuk Add Tips (hanya untuk admin)
+      floatingActionButton: _hasAdminAccess
+          ? FloatingActionButton(
+              onPressed: () => _addNewTip(context),
+              backgroundColor: const Color(0xFF4CAF50),
+              child: const Icon(Icons.add, color: Colors.white),
+            )
+          : null,
     );
   }
 
@@ -200,40 +336,42 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
                       ],
                     ),
                   ),
-                  PopupMenuButton<String>(
-                    onSelected: (value) {
-                      switch (value) {
-                        case 'edit':
-                          _editTip(context, tip);
-                          break;
-                        case 'delete':
-                          _deleteTip(context, tip, tipsProvider);
-                          break;
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit, color: Colors.blue),
-                            SizedBox(width: 8),
-                            Text('Edit'),
-                          ],
+                  // Show menu only for admin
+                  if (_hasAdminAccess)
+                    PopupMenuButton<String>(
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'edit':
+                            _editTip(context, tip);
+                            break;
+                          case 'delete':
+                            _deleteTip(context, tip, tipsProvider);
+                            break;
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit, color: Colors.blue),
+                              SizedBox(width: 8),
+                              Text('Edit'),
+                            ],
+                          ),
                         ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Hapus'),
-                          ],
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('Hapus'),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                 ],
               ),
               
@@ -391,26 +529,163 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Tutup'),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _editTip(context, tip);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4CAF50),
+          // Show edit button only for admin
+          if (_hasAdminAccess)
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _editTip(context, tip);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4CAF50),
+              ),
+              child: const Text('Edit', style: TextStyle(color: Colors.white)),
             ),
-            child: const Text('Edit', style: TextStyle(color: Colors.white)),
-          ),
         ],
       ),
     );
   }
 
+  void _addNewTip(BuildContext context) {
+    // Navigate to add tip page atau show dialog
+    // Implementasi ini tergantung pada bagaimana Anda ingin menambah tip
+    print('Add new tip - Admin access confirmed');
+    
+    // Example: Show add tip dialog
+    _showAddEditDialog(context, null);
+  }
+
   void _editTip(BuildContext context, Map<String, dynamic> tip) {
-    // Navigate to edit tip page
+    // Navigate to edit tip page atau show dialog
     // Implementasi ini tergantung pada bagaimana Anda ingin mengedit tip
-    // Bisa menggunakan Navigator.push ke halaman edit atau modal
-    print('Edit tip dengan ID: ${tip['id_tips']}');
+    print('Edit tip dengan ID: ${tip['id_tips']} - Admin access confirmed');
+    
+    // Example: Show edit tip dialog
+    _showAddEditDialog(context, tip);
+  }
+
+  void _showAddEditDialog(BuildContext context, Map<String, dynamic>? tip) {
+    final isEdit = tip != null;
+    final judulController = TextEditingController(text: tip?['judul'] ?? '');
+    final deskripsiController = TextEditingController(text: tip?['deskripsi'] ?? '');
+    final gambarController = TextEditingController(text: tip?['gambar'] ?? '');
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isEdit ? 'Edit Tips' : 'Tambah Tips'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: judulController,
+                decoration: const InputDecoration(
+                  labelText: 'Judul',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 1,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: deskripsiController,
+                decoration: const InputDecoration(
+                  labelText: 'Deskripsi',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 4,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: gambarController,
+                decoration: const InputDecoration(
+                  labelText: 'URL Gambar (Opsional)',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 1,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              judulController.dispose();
+              deskripsiController.dispose();
+              gambarController.dispose();
+            },
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final judul = judulController.text.trim();
+              final deskripsi = deskripsiController.text.trim();
+              final gambar = gambarController.text.trim();
+              
+              if (judul.isEmpty || deskripsi.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Judul dan deskripsi tidak boleh kosong'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+              
+              Navigator.pop(context);
+              
+              final tipsProvider = Provider.of<TipsProvider>(context, listen: false);
+              
+              bool success;
+              if (isEdit) {
+                success = await tipsProvider.updateTip(
+                  idTips: tip['id_tips'],
+                  judul: judul,
+                  deskripsi: deskripsi,
+                  gambar: gambar.isEmpty ? null : gambar,
+                  tanggalTips: DateTime.now(),
+                );
+              } else {
+                success = await tipsProvider.addTip(
+                  judul: judul,
+                  deskripsi: deskripsi,
+                  gambar: gambar.isEmpty ? null : gambar,
+                  tanggalTips: DateTime.now(),
+                );
+              }
+              
+              if (success && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(isEdit ? 'Tips berhasil diupdate' : 'Tips berhasil ditambahkan'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } else if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(tipsProvider.error ?? 'Gagal ${isEdit ? 'mengupdate' : 'menambahkan'} tips'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+              
+              judulController.dispose();
+              deskripsiController.dispose();
+              gambarController.dispose();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4CAF50),
+            ),
+            child: Text(
+              isEdit ? 'Update' : 'Tambah',
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _deleteTip(BuildContext context, Map<String, dynamic> tip, TipsProvider tipsProvider) {
@@ -428,12 +703,8 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
             onPressed: () async {
               Navigator.pop(context);
               
-              // Untuk demo, kita anggap token sudah ada
-              // Dalam implementasi nyata, ambil token dari auth provider
-              const token = 'your_token_here';
-              
+              // Gunakan method deleteTip yang sudah menangani auth secara otomatis
               final success = await tipsProvider.deleteTip(
-                token: token,
                 idTips: tip['id_tips'],
               );
               
