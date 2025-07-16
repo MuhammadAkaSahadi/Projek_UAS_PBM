@@ -7,7 +7,11 @@ class LaporanProvider with ChangeNotifier {
   final Map<int, Map<String, dynamic>> _laporanCache = {};
   bool _isLoading = false;
   String? _error;
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
   static const String baseUrl = 'http://192.168.43.143:5042/api/Laporan';
 
   bool get isLoading => _isLoading;

@@ -33,11 +33,15 @@ class DetailLaporanLogic {
   bool isLoading = true;
   late ImageHandlerService imageHandler;
 
-  // Dropdown values
+  // Dropdown
   String sumberBenih = 'Mandiri';
   String satuanPupuk = 'Kg';
   String satuanPestisida = 'L';
+<<<<<<< HEAD
   String satuanPanen = 'Kg';
+=======
+  String satuanPanen = 'Kg'; 
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
   String kualitasHasil = 'Bagus';
 
   // Dropdown options
@@ -52,7 +56,11 @@ class DetailLaporanLogic {
   final List<String> satuanPanenOptions = [
     'Kg',
     'Ton',
+<<<<<<< HEAD
   ];
+=======
+  ]; 
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
   final List<String> kualitasHasilOptions = ['Bagus', 'Sedang', 'Rusak'];
 
   // Callback untuk update UI
@@ -70,7 +78,10 @@ class DetailLaporanLogic {
     );
   }
 
+<<<<<<< HEAD
   // FIXED: Initialize data dengan token parameter
+=======
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
   Future<void> initializeData(
     BuildContext context,
     int idLahan,
@@ -84,7 +95,10 @@ class DetailLaporanLogic {
     onStateChanged?.call();
   }
 
+<<<<<<< HEAD
   // FIXED: Load existing data dengan token parameter
+=======
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
   Future<void> loadExistingData(BuildContext context, int idLahan) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -114,14 +128,15 @@ class DetailLaporanLogic {
     }
   }
 
+<<<<<<< HEAD
   // Extract image URLs using the same logic as DetailLahanLogic
+=======
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
   List<String> _getImageUrls(Map<String, dynamic> laporan) {
     List<String> imageUrls = [];
 
     try {
-      // Cek berbagai format data gambar yang mungkin
 
-      // 1. Field imageUrls sebagai array (format baru dari DetailLaporan)
       if (laporan['imageUrls'] != null && laporan['imageUrls'] is List) {
         for (var url in laporan['imageUrls']) {
           if (url is String && url.isNotEmpty && _isValidUrl(url)) {
@@ -130,7 +145,6 @@ class DetailLaporanLogic {
         }
       }
 
-      // 2. Field imageUrl tunggal (untuk backward compatibility)
       if (laporan['imageUrl'] != null &&
           laporan['imageUrl'].toString().isNotEmpty &&
           _isValidUrl(laporan['imageUrl'].toString())) {
@@ -140,7 +154,6 @@ class DetailLaporanLogic {
         }
       }
 
-      // 3. Field gambar sebagai array (format lama)
       if (laporan['gambar'] != null && laporan['gambar'] is List) {
         for (var gambar in laporan['gambar']) {
           String? url;
@@ -148,7 +161,6 @@ class DetailLaporanLogic {
           if (gambar is String && gambar.isNotEmpty) {
             url = gambar;
           } else if (gambar is Map) {
-            // Cek berbagai kemungkinan field name
             url = gambar['url_gambar'] ??
                 gambar['url'] ??
                 gambar['image_url'] ??
@@ -165,7 +177,6 @@ class DetailLaporanLogic {
         }
       }
 
-      // 4. Field images sebagai array (format alternatif)
       if (laporan['images'] != null && laporan['images'] is List) {
         for (var img in laporan['images']) {
           String? url;
@@ -185,7 +196,6 @@ class DetailLaporanLogic {
         }
       }
 
-      // Debug print untuk troubleshooting
       print('=== IMAGE DEBUG (DetailLaporanLogic) ===');
       print('Laporan keys: ${laporan.keys.toList()}');
       print('Found ${imageUrls.length} images: $imageUrls');
@@ -197,7 +207,10 @@ class DetailLaporanLogic {
     return imageUrls;
   }
 
+<<<<<<< HEAD
   // Helper method to validate URLs
+=======
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
   bool _isValidUrl(String url) {
     try {
       final uri = Uri.parse(url);
@@ -207,13 +220,11 @@ class DetailLaporanLogic {
     }
   }
 
-  // Populate form from existing data - FIXED to match provider structure
   void populateFormFromExistingData(Map<String, dynamic> laporan) {
     try {
       print('=== POPULATING FORM FROM EXISTING DATA ===');
       print('Laporan structure: ${laporan.keys.toList()}');
 
-      // Data Musim Tanam - FIXED field names to match provider
       final musimTanam = laporan['musimTanam'] as List<dynamic>?;
       if (musimTanam != null && musimTanam.isNotEmpty) {
         final firstMusimTanam = musimTanam[0] as Map<String, dynamic>;
@@ -260,7 +271,6 @@ class DetailLaporanLogic {
             'L';
       }
 
-      // Data Pendampingan - FIXED field names
       final pendampingan = laporan['pendampingan'] as List<dynamic>?;
       if (pendampingan != null && pendampingan.isNotEmpty) {
         final firstPendampingan = pendampingan[0] as Map<String, dynamic>;
@@ -281,7 +291,6 @@ class DetailLaporanLogic {
             '';
       }
 
-      // Data Kendala - FIXED field names
       final kendala = laporan['kendala'] as List<dynamic>?;
       if (kendala != null && kendala.isNotEmpty) {
         final firstKendala = kendala[0] as Map<String, dynamic>;
@@ -293,7 +302,6 @@ class DetailLaporanLogic {
             '';
       }
 
-      // Data Hasil Panen - FIXED field names and controller assignment
       final hasilPanen = laporan['hasilPanen'] as List<dynamic>?;
       if (hasilPanen != null && hasilPanen.isNotEmpty) {
         final firstHasil = hasilPanen[0] as Map<String, dynamic>;
@@ -318,7 +326,6 @@ class DetailLaporanLogic {
             'Bagus';
       }
 
-      // Data Catatan - FIXED field names
       final catatan = laporan['catatan'] as List<dynamic>?;
       if (catatan != null && catatan.isNotEmpty) {
         final firstCatatan = catatan[0] as Map<String, dynamic>;
@@ -330,7 +337,10 @@ class DetailLaporanLogic {
             '';
       }
 
+<<<<<<< HEAD
       // Load existing images using local method instead of provider method
+=======
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
       List<String> existingImages = _getImageUrls(laporan);
 
       if (existingImages.isNotEmpty) {
@@ -370,7 +380,10 @@ class DetailLaporanLogic {
     }
   }
 
+<<<<<<< HEAD
   // Validate form
+=======
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
   bool validateForm(BuildContext context) {
     if (tanggalTanamController.text.isEmpty ||
         jenisTanamanController.text.isEmpty ||
@@ -413,7 +426,10 @@ class DetailLaporanLogic {
     return true;
   }
 
+<<<<<<< HEAD
   // FIXED: Prepare laporan data dengan field yang sesuai API
+=======
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
   Map<String, dynamic> prepareLaporanData() {
     return {
       'musimTanam': {
@@ -438,7 +454,13 @@ class DetailLaporanLogic {
       'kendala': {'deskripsi': deskripsiKendalaController.text},
       'hasilPanen': {
         'tanggalPanen': formatTanggal(tanggalPanenController.text),
+<<<<<<< HEAD
         'totalPanen': double.tryParse(totalPanenController.text) ?? 0.0,
+=======
+        'totalPanen':
+            double.tryParse(totalPanenController.text) ??
+            0.0, 
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
         'satuanPanen': satuanPanen,
         'kualitas': kualitasHasil,
       },
@@ -446,7 +468,10 @@ class DetailLaporanLogic {
     };
   }
 
+<<<<<<< HEAD
   // FIXED: Save laporan dengan token handling yang proper
+=======
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
   Future<bool> saveLaporan(
     BuildContext context,
     int idLahan,
@@ -497,7 +522,6 @@ class DetailLaporanLogic {
         }
       }
 
-      // Combine all image URLs (existing + newly uploaded)
       final allImageUrls = <String>[];
       allImageUrls.addAll(imageHandler.existingImageUrls);
       allImageUrls.addAll(newlyUploadedUrls);
@@ -529,7 +553,14 @@ class DetailLaporanLogic {
           token: token,
           idLaporanLahan: idLaporanLahan,
           laporanData: laporanData,
+<<<<<<< HEAD
           imageUrls: uniqueImageUrls.isNotEmpty ? uniqueImageUrls : null,
+=======
+          imageUrls:
+              uniqueImageUrls.isNotEmpty
+                  ? uniqueImageUrls
+                  : null, 
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
         );
       } else {
         // Mode create - gunakan save
@@ -537,12 +568,18 @@ class DetailLaporanLogic {
           token: token,
           idLahan: idLahan,
           laporanData: laporanData,
+<<<<<<< HEAD
           imageUrls: uniqueImageUrls.isNotEmpty ? uniqueImageUrls : null,
+=======
+          imageUrls:
+              uniqueImageUrls.isNotEmpty
+                  ? uniqueImageUrls
+                  : null, 
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
         );
       }
 
       if (success) {
-        // Clear selected images but keep existing ones
         _clearSelectedImagesOnly();
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -577,23 +614,18 @@ class DetailLaporanLogic {
     }
   }
 
-  // Helper method to clear only selected images, not existing ones
   void _clearSelectedImagesOnly() {
-    // Move uploaded images to existing images to preserve them
     if (imageHandler.uploadedImageUrls.isNotEmpty) {
       final currentExisting = List<String>.from(imageHandler.existingImageUrls);
       currentExisting.addAll(imageHandler.uploadedImageUrls);
       imageHandler.initializeWithExistingImages(currentExisting);
     }
 
-    // Clear uploaded URLs since they're now part of existing
     imageHandler.clearUploadedImages();
   }
 
-  // Get image handler for UI access
   ImageHandlerService get getImageHandler => imageHandler;
 
-  // Methods to work with images through the logic layer
   void showImagePicker() {
     imageHandler.showImageSourceDialog();
   }
@@ -602,7 +634,6 @@ class DetailLaporanLogic {
   bool get isUploadingImages => imageHandler.isUploadingImages;
   int get totalImages => imageHandler.totalImages;
 
-  // Get all image URLs for display
   List<String> getAllDisplayImages() {
     final List<String> allImages = [];
     allImages.addAll(imageHandler.existingImageUrls);
@@ -610,7 +641,6 @@ class DetailLaporanLogic {
     return allImages;
   }
 
-  // Update dropdown values
   void updateSumberBenih(String? value) {
     if (value != null) {
       sumberBenih = value;

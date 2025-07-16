@@ -60,6 +60,15 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // Load tips when page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<TipsProvider>(context, listen: false).fetchAllTips();
+    });
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -192,9 +201,15 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
                         Text(
                           'Terjadi Kesalahan',
                           style: TextStyle(
+<<<<<<< HEAD
                             fontSize: 16,
                             color: Colors.red[600],
                             fontWeight: FontWeight.w500,
+=======
+                            fontSize: 18,
+                            color: Colors.red[600],
+                            fontWeight: FontWeight.bold,
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -204,7 +219,11 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
                             tipsProvider.error!,
                             style: TextStyle(
                               fontSize: 14,
+<<<<<<< HEAD
                               color: Colors.red[500],
+=======
+                              color: Colors.grey[600],
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -213,7 +232,11 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
                         ElevatedButton(
                           onPressed: () {
                             tipsProvider.clearError();
+<<<<<<< HEAD
                             tipsProvider.refresh();
+=======
+                            tipsProvider.fetchAllTips();
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF4CAF50),
@@ -281,6 +304,7 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
           ),
         ],
       ),
+<<<<<<< HEAD
       // Floating Action Button untuk Add Tips (hanya untuk admin)
       floatingActionButton: _hasAdminAccess
           ? FloatingActionButton(
@@ -289,6 +313,13 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
               child: const Icon(Icons.add, color: Colors.white),
             )
           : null,
+=======
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _addNewTip(context),
+        backgroundColor: const Color(0xFF4CAF50),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
     );
   }
 
@@ -336,6 +367,7 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
                       ],
                     ),
                   ),
+<<<<<<< HEAD
                   // Show menu only for admin
                   if (_hasAdminAccess)
                     PopupMenuButton<String>(
@@ -359,6 +391,28 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
                               Text('Edit'),
                             ],
                           ),
+=======
+                  PopupMenuButton<String>(
+                    onSelected: (value) async {
+                      switch (value) {
+                        case 'edit':
+                          await _editTip(context, tip);
+                          break;
+                        case 'delete':
+                          await _deleteTip(context, tip, tipsProvider);
+                          break;
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, color: Colors.blue),
+                            SizedBox(width: 8),
+                            Text('Edit'),
+                          ],
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
                         ),
                         const PopupMenuItem(
                           value: 'delete',
@@ -529,6 +583,7 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Tutup'),
           ),
+<<<<<<< HEAD
           // Show edit button only for admin
           if (_hasAdminAccess)
             ElevatedButton(
@@ -540,12 +595,22 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
                 backgroundColor: const Color(0xFF4CAF50),
               ),
               child: const Text('Edit', style: TextStyle(color: Colors.white)),
+=======
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _editTip(context, tip);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4CAF50),
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
             ),
         ],
       ),
     );
   }
 
+<<<<<<< HEAD
   void _addNewTip(BuildContext context) {
     // Navigate to add tip page atau show dialog
     // Implementasi ini tergantung pada bagaimana Anda ingin menambah tip
@@ -686,20 +751,82 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
         ],
       ),
     );
+=======
+  Future<void> _addNewTip(BuildContext context) async {
+    // Check if user is logged in
+    final tipsProvider = Provider.of<TipsProvider>(context, listen: false);
+    final isLoggedIn = await tipsProvider.isLoggedIn();
+    
+    if (!isLoggedIn) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Anda harus login terlebih dahulu'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Navigate to add tip page - implement this according to your routing
+    // Example: Navigator.pushNamed(context, '/add-tip');
+    print('Navigate to add tip page');
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
   }
 
-  void _deleteTip(BuildContext context, Map<String, dynamic> tip, TipsProvider tipsProvider) {
-    showDialog(
+  Future<void> _editTip(BuildContext context, Map<String, dynamic> tip) async {
+    final tipsProvider = Provider.of<TipsProvider>(context, listen: false);
+    
+    // Check if user can update this tip
+    final canUpdate = await tipsProvider.canUserUpdateTip(tip['id_tips']);
+    
+    if (!canUpdate) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(tipsProvider.error ?? 'Anda tidak memiliki izin untuk mengedit tip ini'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Navigate to edit tip page with tip data
+    // Example: Navigator.pushNamed(context, '/edit-tip', arguments: tip);
+    print('Navigate to edit tip page with ID: ${tip['id_tips']}');
+  }
+
+  Future<void> _deleteTip(BuildContext context, Map<String, dynamic> tip, TipsProvider tipsProvider) async {
+    // Check if user can delete this tip
+    final canDelete = await tipsProvider.canUserUpdateTip(tip['id_tips']);
+    
+    if (!canDelete) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(tipsProvider.error ?? 'Anda tidak memiliki izin untuk menghapus tip ini'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Show confirmation dialog
+    final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Konfirmasi Hapus'),
         content: Text('Apakah Anda yakin ingin menghapus tips "${tip['judul']}"?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Batal'),
           ),
           ElevatedButton(
+<<<<<<< HEAD
             onPressed: () async {
               Navigator.pop(context);
               
@@ -724,6 +851,9 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
                 );
               }
             },
+=======
+            onPressed: () => Navigator.pop(context, true),
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
             ),
@@ -732,5 +862,51 @@ class _TipsManagementPageState extends State<TipsManagementPage> {
         ],
       ),
     );
+
+    if (shouldDelete == true) {
+      // Show loading dialog
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 20),
+                Text('Menghapus tips...'),
+              ],
+            ),
+          ),
+        );
+      }
+
+      // Delete the tip
+      final success = await tipsProvider.deleteTip(idTips: tip['id_tips']);
+      
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+      
+      // Show result message
+      if (context.mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tips berhasil dihapus'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(tipsProvider.error ?? 'Gagal menghapus tips'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 }

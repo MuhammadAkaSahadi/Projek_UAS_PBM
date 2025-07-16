@@ -17,6 +17,7 @@ class _AddTipsPageState extends State<AddTipsPage> {
   @override
   void initState() {
     super.initState();
+<<<<<<< HEAD
     _initializePage();
   }
 
@@ -86,6 +87,31 @@ class _AddTipsPageState extends State<AddTipsPage> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+=======
+    // Fetch tips data when page loads and ensure token sync
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final tipsProvider = Provider.of<TipsProvider>(context, listen: false);
+      
+      // Ensure sync with AuthProvider before fetching data
+      await tipsProvider.ensureSyncWithAuthProvider();
+      
+      // Check if user is logged in before fetching
+      final isLoggedIn = await tipsProvider.isLoggedIn();
+      if (isLoggedIn) {
+        tipsProvider.fetchAllTips();
+      } else {
+        // Handle case where user is not logged in
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sesi telah berakhir. Silakan login kembali.'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
     });
   }
 
@@ -299,10 +325,41 @@ class _AddTipsPageState extends State<AddTipsPage> {
             ),
           ],
         ),
+<<<<<<< HEAD
+=======
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.black),
+            onPressed: () async {
+              final tipsProvider = Provider.of<TipsProvider>(context, listen: false);
+              
+              // Ensure token sync before refresh
+              await tipsProvider.ensureSyncWithAuthProvider();
+              
+              // Check if still logged in
+              final isLoggedIn = await tipsProvider.isLoggedIn();
+              if (isLoggedIn) {
+                tipsProvider.refresh();
+              } else {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Sesi telah berakhir. Silakan login kembali.'),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+        ],
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
       ),
     );
   }
 
+<<<<<<< HEAD
   Widget _buildBody(TipsProvider tipsProvider) {
     if (tipsProvider.isLoading) {
       return const Center(
@@ -311,6 +368,73 @@ class _AddTipsPageState extends State<AddTipsPage> {
         ),
       );
     }
+=======
+          if (tipsProvider.error != null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Terjadi Kesalahan',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red[600],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      tipsProvider.error!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.red[400],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      tipsProvider.clearError();
+                      
+                      // Ensure token sync before retry
+                      await tipsProvider.ensureSyncWithAuthProvider();
+                      
+                      final isLoggedIn = await tipsProvider.isLoggedIn();
+                      if (isLoggedIn) {
+                        tipsProvider.refresh();
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Sesi telah berakhir. Silakan login kembali.'),
+                              backgroundColor: Colors.red,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Coba Lagi'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
 
     if (tipsProvider.error != null) {
       return Center(
@@ -330,6 +454,7 @@ class _AddTipsPageState extends State<AddTipsPage> {
                 fontWeight: FontWeight.bold,
                 color: Colors.red[600],
               ),
+<<<<<<< HEAD
             ),
             const SizedBox(height: 8),
             Padding(
@@ -348,6 +473,45 @@ class _AddTipsPageState extends State<AddTipsPage> {
               onPressed: () {
                 tipsProvider.clearError();
                 tipsProvider.refresh();
+=======
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              // Ensure token sync before refresh
+              await tipsProvider.ensureSyncWithAuthProvider();
+              
+              final isLoggedIn = await tipsProvider.isLoggedIn();
+              if (isLoggedIn) {
+                return tipsProvider.refresh();
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Sesi telah berakhir. Silakan login kembali.'),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            },
+            color: Colors.green,
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: tipsProvider.tips.length,
+              itemBuilder: (context, index) {
+                final tip = tipsProvider.tips[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _buildTipsCard(
+                    context: context,
+                    tip: tip,
+                    tipsProvider: tipsProvider,
+                  ),
+                );
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
               },
               icon: const Icon(Icons.refresh),
               label: const Text('Coba Lagi'),
@@ -412,6 +576,49 @@ class _AddTipsPageState extends State<AddTipsPage> {
           );
         },
       ),
+<<<<<<< HEAD
+=======
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.green,
+        foregroundColor: Colors.white,
+        onPressed: () async {
+          final tipsProvider = Provider.of<TipsProvider>(context, listen: false);
+          
+          // Ensure token sync and check login status before navigation
+          await tipsProvider.ensureSyncWithAuthProvider();
+          
+          final isLoggedIn = await tipsProvider.isLoggedIn();
+          if (!isLoggedIn) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Sesi telah berakhir. Silakan login kembali.'),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+            return;
+          }
+
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const DetailAddTipsPage(),
+            ),
+          );
+          
+          // Refresh data if tip was added successfully
+          if (result == true) {
+            // Ensure sync again after returning from add page
+            await tipsProvider.ensureSyncWithAuthProvider();
+            tipsProvider.refresh();
+          }
+        },
+        shape: const CircleBorder(),
+        child: const Icon(Icons.add),
+      ),
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
     );
   }
 
@@ -590,6 +797,23 @@ class _AddTipsPageState extends State<AddTipsPage> {
                       IconButton(
                         icon: const Icon(Icons.edit, color: Colors.blue),
                         onPressed: () async {
+                          // Check login status before allowing edit
+                          await tipsProvider.ensureSyncWithAuthProvider();
+                          
+                          final isLoggedIn = await tipsProvider.isLoggedIn();
+                          if (!isLoggedIn) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Sesi telah berakhir. Silakan login kembali.'),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                            return;
+                          }
+
                           final result = await Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -602,6 +826,7 @@ class _AddTipsPageState extends State<AddTipsPage> {
                           
                           // Refresh data if tip was updated successfully
                           if (result == true) {
+                            await tipsProvider.ensureSyncWithAuthProvider();
                             tipsProvider.refresh();
                           }
                         },
@@ -611,7 +836,26 @@ class _AddTipsPageState extends State<AddTipsPage> {
                       // Delete button
                       IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _showDeleteConfirmation(context, tipId, title, tipsProvider),
+                        onPressed: () async {
+                          // Check login status before allowing delete
+                          await tipsProvider.ensureSyncWithAuthProvider();
+                          
+                          final isLoggedIn = await tipsProvider.isLoggedIn();
+                          if (!isLoggedIn) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Sesi telah berakhir. Silakan login kembali.'),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                            return;
+                          }
+
+                          _showDeleteConfirmation(context, tipId, title, tipsProvider);
+                        },
                         tooltip: 'Hapus Tips',
                       ),
                     ],
@@ -767,7 +1011,14 @@ class _AddTipsPageState extends State<AddTipsPage> {
     );
 
     try {
+<<<<<<< HEAD
       // Use TipsProvider's deleteTip method (no need to pass token manually)
+=======
+      // Ensure token sync before attempting delete
+      await tipsProvider.ensureSyncWithAuthProvider();
+      
+      // Use the TipsProvider's deleteTip method which handles token management automatically
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
       final success = await tipsProvider.deleteTip(idTips: tipId);
 
       // Close loading dialog
@@ -785,7 +1036,11 @@ class _AddTipsPageState extends State<AddTipsPage> {
           );
         }
       } else {
+<<<<<<< HEAD
         // Show error message
+=======
+        // Show error message - error is already set in the provider
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

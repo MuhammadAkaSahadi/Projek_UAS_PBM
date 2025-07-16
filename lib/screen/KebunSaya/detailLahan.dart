@@ -345,14 +345,10 @@ class _DetailLahanState extends State<DetailLahan> {
   Widget build(BuildContext context) {
     return Consumer2<LahanProvider, LaporanProvider>(
       builder: (context, lahanProvider, laporanProvider, child) {
-        // Dapatkan data dari providers
         final laporan = laporanProvider.getLaporan(widget.idLahan);
         final isLaporanEmpty = laporanProvider.isLaporanEmpty(widget.idLahan);
         final isLoading = laporanProvider.isLoading;
         final error = laporanProvider.error;
-
-        // Debug print menggunakan logic
-        _logic.debugPrintLahan(lahanProvider);
 
         return Scaffold(
           backgroundColor: const Color(0xFFF9F9F9),

@@ -39,6 +39,44 @@ class AddMappingLogic {
     }
   }
 
+  // Fungsi untuk undo titik terakhir
+  void undoLastPoint() {
+    if (!isDisposed && polygonPoints.isNotEmpty) {
+      safeSetState(() {
+        polygonPoints.removeLast();
+      });
+      _showMessage("Titik terakhir telah dihapus");
+    } else if (polygonPoints.isEmpty) {
+      _showMessage("Tidak ada titik untuk dihapus");
+    }
+  }
+
+  // Fungsi untuk clear semua titik
+  void clearAllPoints() {
+    if (!isDisposed) {
+      safeSetState(() {
+        polygonPoints.clear();
+      });
+      _showMessage("Semua titik telah dihapus");
+    }
+  }
+
+  // Fungsi untuk mengecek apakah polygon valid
+  bool isPolygonValid() {
+    return polygonPoints.length >= 3;
+  }
+
+  // Fungsi untuk mendapatkan status polygon
+  String getPolygonStatus() {
+    if (polygonPoints.isEmpty) {
+      return "Belum ada titik polygon";
+    } else if (polygonPoints.length < 3) {
+      return "Minimal 3 titik diperlukan (saat ini: ${polygonPoints.length})";
+    } else {
+      return "${polygonPoints.length} titik polygon siap";
+    }
+  }
+
   Future<void> getUserLocation() async {
     if (isDisposed) return;
     
@@ -288,6 +326,7 @@ class AddMappingLogic {
       safeSetState(() {
         polygonPoints.add(point);
       });
+      
     }
   }
 }

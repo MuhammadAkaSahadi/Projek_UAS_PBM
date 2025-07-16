@@ -17,19 +17,21 @@ class DetailLahanLogic {
   DetailLahanLogic(this.context, this.idLahan);
 
   // ===== TOKEN MANAGEMENT =====
+  
   Future<String?> getTokenFromAuthProvider() async {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       return authProvider.token;
     } catch (e) {
-      print('Error getting token from provider: $e');
       return null;
     }
   }
 
   // ===== DATA INITIALIZATION =====
+  
   Future<void> initializeData() async {
     token = await getTokenFromAuthProvider();
+<<<<<<< HEAD
 
     // Fetch laporan menggunakan provider
     final laporanProvider = Provider.of<LaporanProvider>(
@@ -37,29 +39,26 @@ class DetailLahanLogic {
       listen: false,
     );
     await laporanProvider.fetchLaporan(idLahan, token!);
+=======
+    final laporanProvider = Provider.of<LaporanProvider>(context, listen: false);
+    await laporanProvider.fetchLaporan(idLahan);
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
   }
 
   // ===== LAPORAN OPERATIONS =====
+  
   Future<void> refreshLaporan() async {
-    final laporanProvider = Provider.of<LaporanProvider>(
-      context,
-      listen: false,
-    );
-    // Clear cache dulu untuk memastikan data terbaru
+    final laporanProvider = Provider.of<LaporanProvider>(context, listen: false);
     laporanProvider.clearLaporanCache(idLahan);
     await laporanProvider.fetchLaporan(idLahan, token!);
   }
 
   Future<void> createLaporan() async {
     if (token == null) {
-      _showSnackBar(
-        'Token tidak tersedia. Silakan login ulang.',
-        Colors.red,
-      );
+      _showSnackBar('Token tidak tersedia. Silakan login ulang.', Colors.red);
       return;
     }
 
-    // Navigate ke halaman create laporan
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -67,26 +66,18 @@ class DetailLahanLogic {
       ),
     );
 
-    // Jika create berhasil, refresh data
     if (result == true) {
       await refreshLaporan();
-      _showSnackBar(
-        'Laporan berhasil dibuat',
-        Colors.green,
-      );
+      _showSnackBar('Laporan berhasil dibuat', Colors.green);
     }
   }
 
   Future<void> editLaporan() async {
     if (token == null) {
-      _showSnackBar(
-        'Token tidak tersedia. Silakan login ulang.',
-        Colors.red,
-      );
+      _showSnackBar('Token tidak tersedia. Silakan login ulang.', Colors.red);
       return;
     }
 
-    // Navigate ke halaman edit dengan data laporan yang sudah ada
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -94,79 +85,52 @@ class DetailLahanLogic {
       ),
     );
 
-    // Jika edit berhasil, refresh data
     if (result == true) {
       await refreshLaporan();
-      _showSnackBar(
-        'Laporan berhasil diperbarui',
-        Colors.green,
-      );
+      _showSnackBar('Laporan berhasil diperbarui', Colors.green);
     }
   }
 
   Future<void> deleteLaporan() async {
     if (token == null) {
-      _showSnackBar(
-        'Token tidak tersedia. Silakan login ulang.',
-        Colors.red,
-      );
+      _showSnackBar('Token tidak tersedia. Silakan login ulang.', Colors.red);
       return;
     }
 
-    // Dapatkan ID laporan lahan dari provider
-    final laporanProvider = Provider.of<LaporanProvider>(
-      context,
-      listen: false,
-    );
+    final laporanProvider = Provider.of<LaporanProvider>(context, listen: false);
     final idLaporanLahan = laporanProvider.getLaporanLahanId(idLahan);
 
     if (idLaporanLahan == null) {
-      _showSnackBar(
-        'ID laporan tidak ditemukan',
-        Colors.red,
-      );
+      _showSnackBar('ID laporan tidak ditemukan', Colors.red);
       return;
     }
 
-    // Tampilkan dialog konfirmasi
     final shouldDelete = await _showDeleteConfirmationDialog();
+    if (shouldDelete != true) return;
 
-    if (shouldDelete == true) {
-      // Tampilkan loading
-      _showLoadingDialog();
+    _showLoadingDialog();
 
-      final success = await laporanProvider.deleteLaporan(
-        token!,
-        idLaporanLahan,
+    final success = await laporanProvider.deleteLaporan(token!, idLaporanLahan);
+    Navigator.of(context).pop(); // Close loading dialog
+
+    if (success) {
+      _showSnackBar('Laporan berhasil dihapus', Colors.green);
+      await refreshLaporan();
+    } else {
+      _showSnackBar(
+        laporanProvider.error ?? 'Gagal menghapus laporan',
+        Colors.red,
       );
-
-      // Tutup loading dialog
-      Navigator.of(context).pop();
-
-      if (success) {
-        _showSnackBar(
-          'Laporan berhasil dihapus',
-          Colors.green,
-        );
-        // Refresh data untuk update UI
-        await refreshLaporan();
-      } else {
-        _showSnackBar(
-          laporanProvider.error ?? 'Gagal menghapus laporan',
-          Colors.red,
-        );
-      }
     }
   }
 
   // ===== IMAGE PROCESSING =====
+  
   List<String> getImageUrls(Map<String, dynamic> laporan) {
     List<String> imageUrls = [];
 
     try {
-      // Cek berbagai format data gambar yang mungkin
-
-      // 1. Field imageUrls sebagai array (format baru dari DetailLaporan)
+      // Check imageUrls field (array format)
       if (laporan['imageUrls'] != null && laporan['imageUrls'] is List) {
         for (var url in laporan['imageUrls']) {
           if (url is String && url.isNotEmpty && _isValidUrl(url)) {
@@ -175,7 +139,7 @@ class DetailLahanLogic {
         }
       }
 
-      // 2. Field imageUrl tunggal (untuk backward compatibility)
+      // Check single imageUrl field (backward compatibility)
       if (laporan['imageUrl'] != null &&
           laporan['imageUrl'].toString().isNotEmpty &&
           _isValidUrl(laporan['imageUrl'].toString())) {
@@ -185,57 +149,27 @@ class DetailLahanLogic {
         }
       }
 
-      // 3. Field gambar sebagai array (format lama)
+      // Check gambar field (legacy format)
       if (laporan['gambar'] != null && laporan['gambar'] is List) {
         for (var gambar in laporan['gambar']) {
-          String? url;
-
-          if (gambar is String && gambar.isNotEmpty) {
-            url = gambar;
-          } else if (gambar is Map) {
-            // Cek berbagai kemungkinan field name
-            url = gambar['url_gambar'] ??
-                gambar['url'] ??
-                gambar['image_url'] ??
-                gambar['gambar'];
-          }
-
-          if (url != null &&
-              url.isNotEmpty &&
-              _isValidUrl(url) &&
-              !imageUrls.contains(url)) {
+          String? url = _extractUrlFromGambar(gambar);
+          if (url != null && !imageUrls.contains(url)) {
             imageUrls.add(url);
           }
         }
       }
 
-      // 4. Field images sebagai array (format alternatif)
+      // Check images field (alternative format)
       if (laporan['images'] != null && laporan['images'] is List) {
         for (var img in laporan['images']) {
-          String? url;
-
-          if (img is String && img.isNotEmpty) {
-            url = img;
-          } else if (img is Map) {
-            url = img['url'] ?? img['image_url'] ?? img['src'];
-          }
-
-          if (url != null &&
-              url.isNotEmpty &&
-              _isValidUrl(url) &&
-              !imageUrls.contains(url)) {
+          String? url = _extractUrlFromImage(img);
+          if (url != null && !imageUrls.contains(url)) {
             imageUrls.add(url);
           }
         }
       }
-
-      // Debug print untuk troubleshooting
-      print('=== IMAGE DEBUG ===');
-      print('Laporan keys: ${laporan.keys.toList()}');
-      print('Found ${imageUrls.length} images: $imageUrls');
-      print('==================');
     } catch (e) {
-      print('Error getting image URLs: $e');
+      // Handle error silently
     }
 
     return imageUrls;
@@ -243,11 +177,11 @@ class DetailLahanLogic {
 
   bool hasImages(Map<String, dynamic>? laporan) {
     if (laporan == null) return false;
-    final imageUrls = getImageUrls(laporan);
-    return imageUrls.isNotEmpty;
+    return getImageUrls(laporan).isNotEmpty;
   }
 
   // ===== DATA FORMATTING =====
+  
   String formatDate(String? dateString) {
     if (dateString == null || dateString.isEmpty) return '-';
     try {
@@ -284,104 +218,75 @@ class DetailLahanLogic {
   }
 
   // ===== DATA EXTRACTION =====
+  
   Map<String, String> getMusimTanamData(Map<String, dynamic>? laporan) {
-    if (laporan == null ||
-        laporan['musimTanam'] == null ||
-        laporan['musimTanam'] is! List ||
-        (laporan['musimTanam'] as List).isEmpty) {
-      return {};
-    }
+    final musimTanam = _getFirstItemFromList(laporan, 'musimTanam');
+    if (musimTanam == null) return {};
 
-    final musimTanam = (laporan['musimTanam'] as List).firstOrNull();
     return {
-      "Tanggal Mulai Tanam": formatDate(musimTanam?['tanggal_mulai_tanam']),
-      "Jenis Tanaman": musimTanam?['jenis_tanaman'] ?? '-',
-      "Sumber Benih": musimTanam?['sumber_benih'] ?? '-',
+      "Tanggal Mulai Tanam": formatDate(musimTanam['tanggal_mulai_tanam']),
+      "Jenis Tanaman": musimTanam['jenis_tanaman'] ?? '-',
+      "Sumber Benih": musimTanam['sumber_benih'] ?? '-',
     };
   }
 
   Map<String, String> getInputProduksiData(Map<String, dynamic>? laporan) {
-    if (laporan == null ||
-        laporan['inputProduksi'] == null ||
-        laporan['inputProduksi'] is! List ||
-        (laporan['inputProduksi'] as List).isEmpty) {
-      return {};
-    }
+    final inputProduksi = _getFirstItemFromList(laporan, 'inputProduksi');
+    if (inputProduksi == null) return {};
 
-    final inputProduksi = (laporan['inputProduksi'] as List).firstOrNull();
     return {
       "Jumlah Pupuk": formatNumber(
-        inputProduksi?['jumlah_pupuk'],
-        inputProduksi?['satuan_pupuk'] ?? '',
+        inputProduksi['jumlah_pupuk'],
+        inputProduksi['satuan_pupuk'] ?? '',
       ),
       "Jumlah Pestisida": formatNumber(
-        inputProduksi?['jumlah_pestisida'],
-        inputProduksi?['satuan_pestisida'] ?? '',
+        inputProduksi['jumlah_pestisida'],
+        inputProduksi['satuan_pestisida'] ?? '',
       ),
-      "Teknik Pengolahan": inputProduksi?['teknik_pengolahan_tanah'] ?? '-',
+      "Teknik Pengolahan": inputProduksi['teknik_pengolahan_tanah'] ?? '-',
     };
   }
 
   Map<String, String> getHasilPanenData(Map<String, dynamic>? laporan) {
-    if (laporan == null ||
-        laporan['hasilPanen'] == null ||
-        laporan['hasilPanen'] is! List ||
-        (laporan['hasilPanen'] as List).isEmpty) {
-      return {};
-    }
+    final hasilPanen = _getFirstItemFromList(laporan, 'hasilPanen');
+    if (hasilPanen == null) return {};
 
-    final hasilPanen = (laporan['hasilPanen'] as List).firstOrNull();
     return {
-      "Tanggal Panen": formatDate(hasilPanen?['tanggal_panen']),
+      "Tanggal Panen": formatDate(hasilPanen['tanggal_panen']),
       "Total Panen": formatNumber(
-        hasilPanen?['total_hasil_panen'],
-        hasilPanen?['satuan_panen'] ?? '',
+        hasilPanen['total_hasil_panen'],
+        hasilPanen['satuan_panen'] ?? '',
       ),
-      "Kualitas": hasilPanen?['kualitas'] ?? '-',
+      "Kualitas": hasilPanen['kualitas'] ?? '-',
     };
   }
 
   Map<String, String> getPendampinganData(Map<String, dynamic>? laporan) {
-    if (laporan == null ||
-        laporan['pendampingan'] == null ||
-        laporan['pendampingan'] is! List ||
-        (laporan['pendampingan'] as List).isEmpty) {
-      return {};
-    }
+    final pendampingan = _getFirstItemFromList(laporan, 'pendampingan');
+    if (pendampingan == null) return {};
 
-    final pendampingan = (laporan['pendampingan'] as List).firstOrNull();
     return {
-      "Tanggal Kunjungan": formatDate(pendampingan?['tanggal_kunjungan']),
-      "Materi Penyuluhan": pendampingan?['materi_penyuluhan'] ?? '-',
-      "Kritik dan Saran": pendampingan?['kritik_dan_saran'] ?? '-',
+      "Tanggal Kunjungan": formatDate(pendampingan['tanggal_kunjungan']),
+      "Materi Penyuluhan": pendampingan['materi_penyuluhan'] ?? '-',
+      "Kritik dan Saran": pendampingan['kritik_dan_saran'] ?? '-',
     };
   }
 
   Map<String, String> getKendalaData(Map<String, dynamic>? laporan) {
-    if (laporan == null ||
-        laporan['kendala'] == null ||
-        laporan['kendala'] is! List ||
-        (laporan['kendala'] as List).isEmpty) {
-      return {};
-    }
+    final kendala = _getFirstItemFromList(laporan, 'kendala');
+    if (kendala == null) return {};
 
-    final kendala = (laporan['kendala'] as List).firstOrNull();
     return {
-      "Deskripsi": kendala?['deskripsi'] ?? '-',
+      "Deskripsi": kendala['deskripsi'] ?? '-',
     };
   }
 
   Map<String, String> getCatatanData(Map<String, dynamic>? laporan) {
-    if (laporan == null ||
-        laporan['catatan'] == null ||
-        laporan['catatan'] is! List ||
-        (laporan['catatan'] as List).isEmpty) {
-      return {};
-    }
+    final catatan = _getFirstItemFromList(laporan, 'catatan');
+    if (catatan == null) return {};
 
-    final catatan = (laporan['catatan'] as List).firstOrNull();
     return {
-      "Deskripsi": catatan?['deskripsi'] ?? '-',
+      "Deskripsi": catatan['deskripsi'] ?? '-',
     };
   }
 
@@ -395,32 +300,45 @@ class DetailLahanLogic {
     };
   }
 
-  // ===== DEBUG HELPERS =====
-  void debugPrintLahan(LahanProvider lahanProvider) {
-    final currentLahan = lahanProvider.getLahanById(idLahan);
-    
-    print('=== DETAIL LAHAN BUILD DEBUG ===');
-    print('IdLahan: $idLahan');
-    print('CurrentLahan: $currentLahan');
-    print('CurrentLahan keys: ${currentLahan?.keys.toList()}');
-    
-    if (currentLahan != null) {
-      print('Nama lahan: ${currentLahan['nama_lahan']}');
-      print('Luas lahan: ${currentLahan['luas_lahan']}');
-      print('Satuan luas: ${currentLahan['satuan_luas']}');
-      print('Koordinat: ${currentLahan['koordinat']}');
-      print('Centroid lat: ${currentLahan['centroid_lat']}');
-      print('Centroid lng: ${currentLahan['centroid_lng']}');
-
-      // Debug semua field yang ada
-      currentLahan.forEach((key, value) {
-        print('Field $key: $value (${value.runtimeType})');
-      });
+  // ===== PRIVATE HELPER METHODS =====
+  
+  Map<String, dynamic>? _getFirstItemFromList(Map<String, dynamic>? laporan, String key) {
+    if (laporan == null || 
+        laporan[key] == null || 
+        laporan[key] is! List || 
+        (laporan[key] as List).isEmpty) {
+      return null;
     }
-    print('================================');
+    return (laporan[key] as List).firstOrNull();
   }
 
-  // ===== PRIVATE HELPER METHODS =====
+  String? _extractUrlFromGambar(dynamic gambar) {
+    String? url;
+    
+    if (gambar is String && gambar.isNotEmpty) {
+      url = gambar;
+    } else if (gambar is Map) {
+      url = gambar['url_gambar'] ?? 
+            gambar['url'] ?? 
+            gambar['image_url'] ?? 
+            gambar['gambar'];
+    }
+
+    return (url != null && url.isNotEmpty && _isValidUrl(url)) ? url : null;
+  }
+
+  String? _extractUrlFromImage(dynamic img) {
+    String? url;
+    
+    if (img is String && img.isNotEmpty) {
+      url = img;
+    } else if (img is Map) {
+      url = img['url'] ?? img['image_url'] ?? img['src'];
+    }
+
+    return (url != null && url.isNotEmpty && _isValidUrl(url)) ? url : null;
+  }
+
   bool _isValidUrl(String url) {
     try {
       final uri = Uri.parse(url);
@@ -445,9 +363,7 @@ class DetailLahanLogic {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Konfirmasi Hapus'),
-          content: const Text(
-            'Apakah Anda yakin ingin menghapus laporan ini? '
-          ),
+          content: const Text('Apakah Anda yakin ingin menghapus laporan ini?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),

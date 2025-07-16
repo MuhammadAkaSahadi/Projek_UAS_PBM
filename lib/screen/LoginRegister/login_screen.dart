@@ -35,10 +35,19 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text.trim();
 
     try {
+<<<<<<< HEAD
       // Use the auth provider's login method
       final success = await authProvider.login(
         identifier: username, // AuthProvider uses 'identifier' not 'username'
         password: password,
+=======
+      final response = await http.post(
+        Uri.parse(
+          'http://192.168.43.143:5042/api/login/login',
+        ), // Run ini dulu di VS dotnet run --urls "http://0.0.0.0:5042"
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': username, 'password': password}),
+>>>>>>> 977283b5c55f44df8412999885a169e37a43c1c1
       );
 
       if (success && mounted) {
